@@ -217,8 +217,8 @@
     const g = (n) => s.getPropertyValue(n).trim();
     return {
       ink: g('--ink'), muted: g('--ink-2'), rule: g('--rule'), accent: g('--accent'),
-      accentSoft: g('--accent-soft'), theory: g('--theory'), sheet: g('--sheet'),
-      mono: g('--font-mono') || 'monospace',
+      accentSoft: g('--accent-soft'), theory: g('--theory'), sky: g('--sky'), sheet: g('--sheet'),
+      mono: g('--font-mono') || 'monospace', display: g('--font-display') || 'sans-serif',
     };
   }
 
@@ -335,6 +335,7 @@
       c.textBaseline = 'middle';
       for (const t of yt) c.fillText(t.label, m.l - 6, this.Y(t.v));
       // axis titles
+      c.font = `500 12px ${col.display}`;
       if (o.xlabel) {
         c.textAlign = 'center';
         c.textBaseline = 'bottom';
@@ -344,6 +345,7 @@
         c.textAlign = 'left';
         c.textBaseline = 'top';
         c.fillStyle = col.ink;
+        c.font = `600 12px ${col.display}`;
         c.fillText(o.title, m.l, 4);
       }
       return this;
@@ -826,17 +828,17 @@
       pr.begin(1e-2, 1e2, 0, rmax, { xlog: true }).axes({ title: 'excess risk R(λ)', xlabel: 'ridge parameter λ (log scale)', ny: 4 });
       pr.clip(() => {
         pr.line(lams, rs.map((r) => r.bias), { color: pr.col.accent, width: 1.6, dash: [5, 3] });
-        pr.line(lams, rs.map((r) => r.variance), { color: pr.col.theory, width: 1.6, dash: [2, 3] });
+        pr.line(lams, rs.map((r) => r.variance), { color: pr.col.sky, width: 1.8, dash: [2, 3] });
         pr.line(lams, rs.map((r) => r.risk), { color: pr.col.ink, width: 2.2 });
         pr.vline(lstar, { color: pr.col.muted, width: 1, dash: [3, 3] });
         pr.dot(lstar, star.risk, { color: pr.col.ink });
       });
-      pr.text(lstar, star.risk, `λ* = ${lstar.toFixed(2)}`, { dx: 7, dy: -9 });
+      pr.text(lstar, rmax * 0.93, `λ* = ${lstar.toFixed(2)}`, { dx: 6 }); // label the marker line at its top, clear of the curves
 
       $('rr-readout').innerHTML = [
         legend(pr.col.ink, 'R(λ)'),
         legend(pr.col.accent, 'bias', true),
-        legend(pr.col.theory, 'variance', true),
+        legend(pr.col.sky, 'variance', true),
         `<span>λ₋ = <b>${fmt(lm, 3)}</b>, λ₊ = <b>${fmt(lp, 3)}</b></span>`,
         `<span>λ* = γ/SNR = <b>${fmt(lstar, 3)}</b></span>`,
         `<span>R(λ*) = <b>${fmt(star.risk, 4)}</b> (bias ${fmt(star.bias, 3)}, variance ${fmt(star.variance, 3)})</span>`,

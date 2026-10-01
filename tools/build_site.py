@@ -50,7 +50,7 @@ LECTURES = [
 FONTS = (
     "https://fonts.googleapis.com/css2?"
     "family=IBM+Plex+Mono:wght@400;500"
-    "&family=IBM+Plex+Sans+Condensed:wght@500;600;700"
+    "&family=Plus+Jakarta+Sans:wght@500;600;700;800"
     "&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400"
     "&display=swap"
 )
