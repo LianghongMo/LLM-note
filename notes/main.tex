@@ -1,0 +1,36 @@
+\documentclass[11pt]{report}
+
+\usepackage[margin=1.1in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{amsmath,amssymb,bm,mathtools}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage[colorlinks=true,linkcolor=blue!50!black,citecolor=blue!50!black,urlcolor=blue!50!black]{hyperref}
+
+\setcounter{secnumdepth}{3}
+\setcounter{tocdepth}{2}
+
+% Summary box at the start of each lecture (plain LaTeX, no extra packages)
+\newsavebox{\keyideasbox}
+\newenvironment{keyideas}
+    {\par\medskip\noindent\begin{lrbox}{\keyideasbox}%
+     \begin{minipage}{\dimexpr\linewidth-2\fboxsep-2\fboxrule\relax}%
+     \textbf{\sffamily Key ideas}\par\smallskip}
+    {\end{minipage}\end{lrbox}%
+     \fcolorbox{blue!35!black}{blue!3!white}{\usebox{\keyideasbox}}\par\medskip}
+
+\title{\textbf{LLM-note}\\[4pt]
+\large Lecture notes on the theory of neural networks}
+\author{Lianghong Mo}
+\date{}
+
+\begin{document}
+
+\maketitle
+\tableofcontents
+
+\include{lecture1}
+\include{lecture2}
+
+\end{document}

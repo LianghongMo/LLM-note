@@ -1,0 +1,1530 @@
+% ============================================================
+% Lecture 1: overview of the three theoretical questions
+% ============================================================
+\chapter{Three Questions in Deep-Learning Theory}
+\label{ch:lecture1}
+
+\begin{keyideas}
+\begin{itemize}
+    \item A neural network is a parametrized family of functions; what it
+    learns is fixed jointly by the architecture, the data, and the
+    optimization algorithm.
+    \item \textbf{Scaling:} which simple effective theory emerges as
+    $N,n,L,W,C\to\infty$ (NTK, mean field, DMFT, Gaussian processes), and
+    why these limits need not commute.
+    \item \textbf{Feature learning:} a network learns the feature map
+    $\Phi_\theta(x)$ itself, not only its coefficients; features are
+    directions in activation space and can be stored in superposition.
+    \item \textbf{Diffusion:} learning the score $\nabla_x\log\rho_t$ by
+    denoising is enough to reverse a noising process and sample from
+    $\rho_{\mathrm{data}}$.
+\end{itemize}
+\end{keyideas}
+
+\section{Introduction}
+
+A useful viewpoint is that a neural network is a \emph{parametrized family of functions}. 
+We choose an architecture, which determines a family
+\begin{equation}
+    \left\{
+    f_\theta:\mathcal X\rightarrow\mathcal Y
+    \right\}_{\theta\in\Theta},
+\end{equation}
+and learning consists of selecting the parameter $\theta$ using data.
+
+Thus there are three conceptually distinct ingredients:
+\begin{enumerate}
+    \item the \textbf{architecture}, which specifies the function class;
+    \item the \textbf{data}, which provide information about the unknown target;
+    \item the \textbf{optimization algorithm}, which determines which member of the
+    function class is actually learned.
+\end{enumerate}
+
+One of the central questions in the theory of neural networks is therefore
+\begin{equation}
+    \boxed{
+    \text{Architecture}
+    +
+    \text{Data}
+    +
+    \text{Optimization}
+    \quad
+    \Longrightarrow
+    \quad
+    \text{Learned function / representation}.
+    }
+\end{equation}
+
+
+% ============================================================
+\subsection{Definition of Neural Networks}
+
+\subsubsection{Fully connected neural networks}
+
+Consider an input
+\begin{equation}
+    x\in\mathbb R^{N_0}.
+\end{equation}
+Define
+\begin{equation}
+    z^{(0)}(x)=x.
+\end{equation}
+A fully connected neural network with $L+1$ layers is recursively defined by
+\begin{equation}
+    z^{(\ell+1)}(x)
+    =
+    W^{(\ell+1)}
+    \phi\!\left(z^{(\ell)}(x)\right)
+    +
+    b^{(\ell+1)},
+    \qquad
+    \ell=0,\ldots,L,
+\end{equation}
+where
+\begin{equation}
+    W^{(\ell+1)}
+    \in
+    \mathbb R^{N_{\ell+1}\times N_\ell},
+    \qquad
+    b^{(\ell+1)}
+    \in
+    \mathbb R^{N_{\ell+1}},
+\end{equation}
+and $\phi$ is a nonlinear activation function applied componentwise.\footnote{With
+this convention $\phi$ also acts on the raw input $z^{(0)}=x$. Lecture~2 uses
+the equally common convention $z^{(1)}=W^{(1)}x+b^{(1)}$; nothing below
+depends on the choice.}
+
+Typical choices include
+\begin{align}
+    \mathrm{ReLU}(x)&=\max(0,x),\\
+    \tanh(x)&=\frac{e^x-e^{-x}}{e^x+e^{-x}},\\
+    \mathrm{GELU}(x)&=x\Phi(x),
+\end{align}
+where $\Phi$ is the standard Gaussian cumulative distribution function.
+
+The output of the network is
+\begin{equation}
+    f_\theta(x)
+    \equiv
+    z^{(L+1)}(x),
+\end{equation}
+where the parameter set is
+\begin{equation}
+    \theta
+    =
+    \left\{
+    W^{(1)},\ldots,W^{(L+1)},
+    b^{(1)},\ldots,b^{(L+1)}
+    \right\}.
+\end{equation}
+
+The nonlinear activation is essential. Without $\phi$, a composition of linear
+layers would still be only a linear transformation:
+\begin{equation}
+    W^{(L)}W^{(L-1)}\cdots W^{(1)}x
+    =
+    W_{\mathrm{eff}}x.
+\end{equation}
+
+
+\subsubsection{Residual neural networks}
+
+Instead of replacing the current representation at every layer, a residual
+network learns a correction:
+\begin{equation}
+    z^{(\ell+1)}
+    =
+    z^{(\ell)}
+    +
+    F_{\theta_\ell}\!\left(z^{(\ell)}\right).
+\end{equation}
+
+A typical residual block is
+\begin{equation}
+    F_{\theta_\ell}(z)
+    =
+    W_2^{(\ell)}
+    \phi\!\left(
+        W_1^{(\ell)}z+b_1^{(\ell)}
+    \right)
+    +
+    b_2^{(\ell)}.
+\end{equation}
+
+Therefore,
+\begin{equation}
+    z^{(\ell+1)}
+    =
+    z^{(\ell)}
+    +
+    W_2^{(\ell)}
+    \phi\!\left(
+        W_1^{(\ell)}z^{(\ell)}
+        +
+        b_1^{(\ell)}
+    \right)
+    +
+    b_2^{(\ell)}.
+\end{equation}
+
+The important physical picture is that each layer makes only an incremental
+update,
+\begin{equation}
+    \Delta z^{(\ell)}
+    =
+    F_{\theta_\ell}(z^{(\ell)}).
+\end{equation}
+
+In a formal continuum-depth limit, a residual network resembles a dynamical
+system,
+\begin{equation}
+    \frac{dz(t)}{dt}
+    =
+    F_{\theta(t)}(z(t)),
+\end{equation}
+which motivates the connection between residual networks and differential
+equations.
+
+
+% ============================================================
+\subsection{How Neural Networks Are Used}
+
+Suppose there is an unknown target function
+\begin{equation}
+    f:\mathcal X\rightarrow\mathcal Y.
+\end{equation}
+We observe a training dataset
+\begin{equation}
+    \mathcal D
+    =
+    \left\{
+    (x_i,y_i)
+    \right\}_{i=1}^{n},
+    \qquad
+    y_i=f(x_i),
+\end{equation}
+where $n$ denotes the number of training samples.
+
+The standard supervised-learning procedure is:
+
+\begin{enumerate}
+    \item \textbf{Data:}
+    observe
+    \begin{equation}
+        \left\{
+        (x_i,f(x_i))
+        \right\}_{i=1}^n.
+    \end{equation}
+    The goal is to infer the unknown function $f$ from finitely many observations.
+
+    \item \textbf{Initialization:}
+    choose an initial parameter
+    \begin{equation}
+        \theta_0
+        \sim
+        P_{\mathrm{init}}.
+    \end{equation}
+
+    \item \textbf{Optimization:}
+    minimize a loss function. For regression, a common choice is
+    \begin{equation}
+        \mathcal L(\theta)
+        =
+        \frac{1}{2n}
+        \sum_{i=1}^n
+        \left\|
+        f(x_i)-f_\theta(x_i)
+        \right\|^2.
+    \end{equation}
+
+    Gradient descent gives
+    \begin{equation}
+        \theta_{t+1}
+        =
+        \theta_t
+        -
+        \eta
+        \nabla_\theta
+        \mathcal L(\theta_t),
+    \end{equation}
+    where $\eta$ is the learning rate.
+
+    In practice one usually uses stochastic gradient descent,
+    \begin{equation}
+        \theta_{t+1}
+        =
+        \theta_t
+        -
+        \eta
+        \widehat{\nabla_\theta \mathcal L},
+    \end{equation}
+    where the gradient is estimated from a minibatch.
+
+    \item \textbf{Generalization / test:}
+    for a new point $x_{\mathrm{new}}$ that was not in the training set,
+    ask whether
+    \begin{equation}
+        f(x_{\mathrm{new}})
+        \approx
+        f_{\theta_{\mathrm{learned}}}(x_{\mathrm{new}}).
+    \end{equation}
+\end{enumerate}
+
+A neural network is therefore not useful merely because it can fit the training
+data. The central problem is whether it can \emph{generalize}.
+
+
+% ============================================================
+\subsection{Three Main Topics}
+
+We focus on three broad theoretical questions:
+
+\begin{enumerate}
+    \item \textbf{Scaling laws and large-network limits:}
+    What happens as the model size, dataset size, and computational budget
+    become very large?
+
+    \item \textbf{Feature learning and representation learning:}
+    What internal representations does the neural network learn, and why do
+    these representations help generalization?
+
+    \item \textbf{Generative models, especially diffusion models:}
+    How can a neural network learn an entire high-dimensional probability
+    distribution and generate new samples from it?
+\end{enumerate}
+
+
+% ============================================================
+\section{Topic I: Scaling Laws and Large-Network Limits}
+
+\subsection{Basic Questions}
+
+Modern neural networks involve several potentially large parameters:
+\begin{align}
+    N &=
+    \text{number of model parameters},\\
+    n &=
+    \text{number of training samples},\\
+    L &=
+    \text{depth},\\
+    W &=
+    \text{width},\\
+    C &=
+    \text{computational budget}.
+\end{align}
+
+The theoretical problem resembles statistical mechanics: instead of studying
+one finite neural network in detail, we would like to identify simple laws that
+emerge in appropriate large-scale limits.
+
+Some central questions are:
+
+\begin{enumerate}
+    \item What happens when
+    \begin{equation}
+        N,n,L,W,C\rightarrow\infty?
+    \end{equation}
+
+    These limits need not commute. For example,
+    \begin{equation}
+        \lim_{n\rightarrow\infty}
+        \lim_{W\rightarrow\infty}
+    \end{equation}
+    may describe a different regime from
+    \begin{equation}
+        \lim_{W\rightarrow\infty}
+        \lim_{n\rightarrow\infty}.
+    \end{equation}
+
+    Therefore the interesting object is often a \emph{joint scaling limit},
+    analogous to a thermodynamic limit.
+
+    \item Does a complicated neural network reduce to a simpler effective theory
+    in such a limit?
+
+    \item Can performance at very large scale be predicted from experiments at
+    relatively small scale?
+
+    \item Which resource is the bottleneck:
+    \begin{equation}
+        \text{model size},\qquad
+        \text{data},\qquad
+        \text{optimization},\qquad
+        \text{compute}?
+    \end{equation}
+
+    \item When does increasing the model size actually improve performance, and
+    when does performance saturate?
+\end{enumerate}
+
+
+% ------------------------------------------------------------
+\subsection{Empirical Scaling Laws}
+
+Empirically, many machine-learning systems approximately obey power-law scaling
+over a substantial range of scales.
+
+For example, test loss may behave as
+\begin{equation}
+    \boxed{
+    \mathcal L(C)
+    =
+    \mathcal L_\infty
+    +
+    A C^{-\beta},
+    }
+\end{equation}
+where
+\begin{equation}
+    C=\text{compute},
+\end{equation}
+$\beta>0$ is a scaling exponent, and $\mathcal L_\infty$ is an irreducible
+loss floor.
+
+Similarly one may study
+\begin{align}
+    \mathcal L(N)
+    &\approx
+    \mathcal L_\infty
+    +
+    A_N N^{-\alpha_N},
+    \\
+    \mathcal L(n)
+    &\approx
+    \mathcal L_\infty
+    +
+    A_n n^{-\alpha_n}.
+\end{align}
+
+More generally,
+\begin{equation}
+    \mathcal L
+    =
+    \mathcal L(N,n,C,\ldots).
+\end{equation}
+
+The interesting theoretical questions are not only whether these power laws
+exist, but also:
+\begin{enumerate}
+    \item why power laws emerge;
+    \item whether the exponents are universal;
+    \item how the exponents depend on the data distribution and architecture;
+    \item how to optimally allocate a fixed computational budget between
+    increasing $N$, increasing $n$, and training for longer.
+\end{enumerate}
+
+
+% ------------------------------------------------------------
+\subsection{Optimization, Approximation, and Data Errors}
+
+It is useful to conceptually decompose the total error into several pieces:
+\begin{equation}
+    \mathcal E_{\mathrm{total}}
+    \sim
+    \mathcal E_{\mathrm{approx}}
+    +
+    \mathcal E_{\mathrm{estimation}}
+    +
+    \mathcal E_{\mathrm{optimization}}.
+\end{equation}
+
+Here:
+\begin{itemize}
+    \item $\mathcal E_{\mathrm{approx}}$ measures whether the architecture is
+    expressive enough to represent the desired function;
+
+    \item $\mathcal E_{\mathrm{estimation}}$ arises because the training dataset
+    is finite;
+
+    \item $\mathcal E_{\mathrm{optimization}}$ measures whether the optimizer
+    succeeds in finding a good parameter configuration.
+\end{itemize}
+
+Scaling the number of parameters only directly attacks the first of these.
+Therefore increasing model size alone need not always improve performance.
+
+
+% ------------------------------------------------------------
+\subsection{Theoretical Approaches}
+
+\subsubsection{Neural Tangent Kernel}
+
+Consider the network output
+\begin{equation}
+    f_\theta(x).
+\end{equation}
+Linearize it around the initialization $\theta_0$:
+\begin{equation}
+    f_\theta(x)
+    \approx
+    f_{\theta_0}(x)
+    +
+    \nabla_\theta f_{\theta_0}(x)^T
+    (\theta-\theta_0).
+\end{equation}
+
+Define the Neural Tangent Kernel
+\begin{equation}
+    K_{\mathrm{NTK}}(x,x')
+    =
+    \nabla_\theta f_{\theta_0}(x)^T
+    \nabla_\theta f_{\theta_0}(x').
+\end{equation}
+
+In an appropriate infinite-width limit, the NTK becomes approximately
+deterministic and changes very little during training.
+
+The nonlinear neural-network training problem is then reduced to an effective
+kernel regression problem.
+
+The physical picture is
+\begin{equation}
+    \boxed{
+    \text{very wide network}
+    \quad\Rightarrow\quad
+    \text{approximately fixed features}
+    +
+    \text{linearized dynamics}.
+    }
+\end{equation}
+
+This regime is often called the \emph{lazy-training regime}.
+
+A major limitation is that realistic neural networks often exhibit substantial
+\emph{feature learning}, whereas the simplest NTK limit freezes the features.
+
+
+% ------------------------------------------------------------
+\subsubsection{Mean-Field Theory}
+\label{sec:meanfield}
+
+Another large-width limit treats individual neurons as interacting particles.
+
+Consider a two-layer network
+\begin{equation}
+    f_m(x)
+    =
+    \frac{1}{m}
+    \sum_{j=1}^m
+    a_j
+    \sigma(w_j^T x).
+\end{equation}
+
+Instead of following every neuron separately, define an empirical distribution
+of neuron parameters,
+\begin{equation}
+    \rho_m(a,w)
+    =
+    \frac{1}{m}
+    \sum_{j=1}^m
+    \delta(a-a_j)
+    \delta(w-w_j).
+\end{equation}
+
+As
+\begin{equation}
+    m\rightarrow\infty,
+\end{equation}
+one can sometimes derive a deterministic evolution equation for
+\begin{equation}
+    \rho(a,w,t).
+\end{equation}
+
+Schematically,
+\begin{equation}
+    \partial_t \rho
+    =
+    \mathcal F[\rho].
+\end{equation}
+
+This is analogous to the passage
+\begin{equation}
+    \text{many particles}
+    \rightarrow
+    \text{continuum density}
+\end{equation}
+in statistical mechanics.
+
+Unlike the simplest NTK regime, the distribution of features $w$ can evolve,
+so mean-field theory can describe genuine feature learning.
+
+
+% ------------------------------------------------------------
+\subsubsection{Dynamical Mean-Field Theory}
+
+For sufficiently complicated random neural networks, especially deep networks
+or recurrent systems, one can seek an effective stochastic description of a
+typical neuron or feature.
+
+The philosophy is analogous to dynamical mean-field theory in many-body
+physics:
+\begin{equation}
+    \boxed{
+    \text{high-dimensional interacting system}
+    \rightarrow
+    \text{self-consistent effective single-site dynamics}.
+    }
+\end{equation}
+
+Instead of tracking every neuron explicitly, one derives self-consistency
+equations for quantities such as
+\begin{align}
+    C(t,t')
+    &=
+    \left\langle
+    z(t)z(t')
+    \right\rangle,
+    \\
+    R(t,t')
+    &=
+    \frac{\delta \langle z(t)\rangle}
+    {\delta h(t')}.
+\end{align}
+
+These quantities play roles analogous to correlation and response functions in
+statistical physics.
+
+
+% ------------------------------------------------------------
+\subsubsection{Bayesian Inference}
+
+A different viewpoint is to place a prior distribution on the network
+parameters,
+\begin{equation}
+    P(\theta),
+\end{equation}
+and use Bayes' rule:
+\begin{equation}
+    P(\theta\mid\mathcal D)
+    =
+    \frac{
+        P(\mathcal D\mid\theta)P(\theta)
+    }{
+        P(\mathcal D)
+    }.
+\end{equation}
+
+Predictions are then obtained by averaging over the posterior:
+\begin{equation}
+    P(y_\ast\mid x_\ast,\mathcal D)
+    =
+    \int
+    d\theta\,
+    P(y_\ast\mid x_\ast,\theta)
+    P(\theta\mid\mathcal D).
+\end{equation}
+
+For some infinitely wide neural networks, the prior over functions becomes a
+Gaussian process,
+\begin{equation}
+    f(x)\sim\mathrm{GP}(0,K(x,x')).
+\end{equation}
+
+This provides another analytically tractable infinite-width limit.
+
+
+% ------------------------------------------------------------
+\subsection{Important Distinction: Scaling Is Not Just ``More Parameters''}
+
+When discussing scaling, one should distinguish several directions:
+\begin{align}
+    \text{model scaling}
+    &: N\rightarrow\infty,
+    \\
+    \text{data scaling}
+    &: n\rightarrow\infty,
+    \\
+    \text{compute scaling}
+    &: C\rightarrow\infty,
+    \\
+    \text{context / horizon scaling}
+    &: T\rightarrow\infty.
+\end{align}
+
+Good scaling often requires these quantities to grow together.
+
+Thus,
+\begin{equation}
+    \boxed{
+    \text{Scaling up the model}
+    \neq
+    \text{scaling up the learning problem}.
+    }
+\end{equation}
+
+
+% ============================================================
+\section{Topic II: Feature Learning and Representation Learning}
+
+\subsection{Linear Models}
+
+Before studying neural networks, consider a linear model in a fixed feature
+space:
+\begin{equation}
+    f_\theta(x)
+    =
+    \theta^T\Phi(x)
+    =
+    \sum_{j=1}^{M}
+    \theta_j\varphi_j(x),
+\end{equation}
+where
+\begin{equation}
+    \Phi(x)
+    =
+    \begin{pmatrix}
+        \varphi_1(x)\\
+        \vdots\\
+        \varphi_M(x)
+    \end{pmatrix}
+\end{equation}
+is a feature map.
+
+The important point is that the features
+\begin{equation}
+    \varphi_j(x)
+\end{equation}
+are fixed. Learning only determines their coefficients $\theta_j$.
+
+Therefore a linear model solves
+\begin{equation}
+    \boxed{
+    \text{fixed representation}
+    +
+    \text{learned linear coefficients}.
+    }
+\end{equation}
+
+
+% ------------------------------------------------------------
+\subsection{Neural Networks Learn the Features}
+
+Consider the final layer of a neural network:
+\begin{equation}
+    f_i(x;\theta)
+    =
+    \sum_{j=1}^{N_L}
+    W_{ij}^{(L+1)}
+    \phi_j(x;\theta),
+\end{equation}
+where
+\begin{equation}
+    \phi_j(x;\theta)
+    =
+    \phi\!\left(
+        z_j^{(L)}(x;\theta)
+    \right).
+\end{equation}
+
+From the perspective of the final layer, this looks exactly like a linear
+model:
+\begin{equation}
+    f(x)
+    =
+    W^{(L+1)}
+    \Phi_\theta(x).
+\end{equation}
+
+The crucial difference is
+\begin{equation}
+    \boxed{
+    \Phi_\theta(x)
+    \text{ itself depends on the learned parameters.}
+    }
+\end{equation}
+
+Thus neural-network training does two things simultaneously:
+\begin{enumerate}
+    \item it learns how to combine features;
+    \item it learns what the features themselves should be.
+\end{enumerate}
+
+This is the basic meaning of \emph{representation learning}.
+
+
+% ------------------------------------------------------------
+\subsection{The Central Feature-Learning Question}
+
+The basic theoretical problem is:
+
+\begin{equation}
+    \boxed{
+    \text{Data}
+    +
+    \text{Architecture}
+    +
+    \text{Optimization}
+    +
+    \text{Initialization}
+    \rightarrow
+    \text{Learned features}.
+    }
+\end{equation}
+
+More explicitly, we would like to understand
+\begin{equation}
+    \Phi_{\theta_t}(x)
+\end{equation}
+as a function of training time $t$.
+
+Questions include:
+\begin{enumerate}
+    \item Which features emerge first during training?
+    \item Which properties of the data determine the learned representation?
+    \item Why are some features reused across many tasks?
+    \item When are representations sparse or distributed?
+    \item When does the network discover semantic concepts?
+    \item How do learned representations change with width and depth?
+\end{enumerate}
+
+
+% ------------------------------------------------------------
+\subsection{A Minimal Two-Layer Model}
+
+Consider
+\begin{equation}
+    f(x;t)
+    =
+    \frac{1}{\sqrt m}
+    \sum_{j=1}^{m}
+    a_j(t)
+    \sigma\!\left(
+        w_j(t)^T x
+    \right).
+\end{equation}
+
+There are two qualitatively different kinds of learning.
+
+If only
+\begin{equation}
+    a_j(t)
+\end{equation}
+change while
+\begin{equation}
+    w_j(t)\approx w_j(0),
+\end{equation}
+then the network is approximately learning a linear combination of fixed
+features
+\begin{equation}
+    \sigma(w_j(0)^T x).
+\end{equation}
+
+By contrast, if
+\begin{equation}
+    w_j(t)
+\end{equation}
+move substantially, the features themselves change:
+\begin{equation}
+    \sigma(w_j(0)^Tx)
+    \longrightarrow
+    \sigma(w_j(t)^Tx).
+\end{equation}
+
+This is genuine feature learning.
+
+This also makes the connection with Topic I clear:
+\begin{equation}
+    \boxed{
+    \text{NTK / lazy limit}
+    \approx
+    \text{weak feature learning},
+    }
+\end{equation}
+whereas other scaling limits can preserve nontrivial feature dynamics.
+
+\paragraph{Remark (parametrization).}
+The prefactor $1/\sqrt m$ used here is the NTK scaling, while the mean-field
+model of Section~\ref{sec:meanfield} uses $1/m$. With $1/\sqrt m$ and an
+$O(1)$ learning rate, each $w_j$ moves by only $O(1/\sqrt m)$ during training,
+so the features freeze as $m\to\infty$. With $1/m$ and a learning rate scaled
+up by $m$, each $w_j$ moves by $O(1)$. The choice of normalization is
+therefore what selects lazy versus feature-learning behavior.
+
+
+% ------------------------------------------------------------
+\subsection{What Is a Semantic Feature?}
+
+Suppose a vision model is given an image of the Golden Gate Bridge.
+
+At the raw-input level, the image consists only of pixel values:
+\begin{equation}
+    x
+    =
+    (x_1,x_2,\ldots,x_N).
+\end{equation}
+
+A low-level feature might detect:
+\begin{equation}
+    \text{edges},\quad
+    \text{colors},\quad
+    \text{textures}.
+\end{equation}
+
+A higher-level representation may encode concepts such as
+\begin{equation}
+    \text{bridge},
+    \qquad
+    \text{suspension bridge},
+    \qquad
+    \text{Golden Gate Bridge},
+    \qquad
+    \text{San Francisco}.
+\end{equation}
+
+These are called \emph{semantic features} because they correspond to meaningful
+concepts rather than simple local properties of the input.
+
+An important question is whether such concepts correspond to individual
+neurons or to directions in a high-dimensional representation space.
+
+
+% ------------------------------------------------------------
+\subsection{Distributed Representations and Superposition}
+
+A naive picture is
+\begin{equation}
+    \text{one neuron}
+    \leftrightarrow
+    \text{one concept}.
+\end{equation}
+
+However, modern neural networks often appear to use distributed
+representations.
+
+A feature may correspond to a direction
+\begin{equation}
+    v_\alpha
+    \in
+    \mathbb R^d
+\end{equation}
+in activation space, rather than to a single neuron.
+
+An activation vector may schematically be written as
+\begin{equation}
+    h(x)
+    \approx
+    \sum_\alpha
+    c_\alpha(x)v_\alpha.
+\end{equation}
+
+If the number of useful features is larger than the activation dimension, the
+network may store multiple features in non-orthogonal directions:
+\begin{equation}
+    v_\alpha^T v_\beta
+    \neq 0.
+\end{equation}
+
+This phenomenon is often called \emph{superposition}.
+
+The rough idea is
+\begin{equation}
+    \boxed{
+    \text{number of useful features}
+    >
+    \text{number of available neurons}
+    }
+\end{equation}
+so the network compresses many features into a smaller-dimensional space.
+
+This can lead to \emph{polysemantic} neurons, where one neuron participates in
+representing several apparently unrelated concepts.
+
+
+% ------------------------------------------------------------
+\subsection{Feature Geometry}
+
+Rather than analyzing individual neurons, it is often more useful to study the
+geometry of representation space.
+
+Let
+\begin{equation}
+    h_\theta(x)\in\mathbb R^d
+\end{equation}
+denote the learned representation.
+
+Then one may study distances
+\begin{equation}
+    d_\theta(x,x')
+    =
+    \left\|
+        h_\theta(x)-h_\theta(x')
+    \right\|,
+\end{equation}
+similarities
+\begin{equation}
+    K_\theta(x,x')
+    =
+    h_\theta(x)^T h_\theta(x'),
+\end{equation}
+or covariance matrices
+\begin{equation}
+    C
+    =
+    \mathbb E_x
+    \left[
+        h_\theta(x)h_\theta(x)^T
+    \right].
+\end{equation}
+
+The spectrum of $C$ provides information about the effective dimensionality of
+the learned representation.
+
+
+% ------------------------------------------------------------
+\subsection{Transformers and In-Context Learning}
+
+Feature learning becomes particularly interesting in transformers.
+
+A transformer maps a sequence
+\begin{equation}
+    x_1,\ldots,x_T
+\end{equation}
+to internal representations
+\begin{equation}
+    h_1^{(\ell)},\ldots,h_T^{(\ell)}.
+\end{equation}
+
+Self-attention performs
+\begin{align}
+    q_i &= W_Q h_i,\\
+    k_j &= W_K h_j,\\
+    v_j &= W_V h_j,
+\end{align}
+followed by
+\begin{equation}
+    \mathrm{Attention}(i)
+    =
+    \sum_j
+    A_{ij}v_j,
+\end{equation}
+with
+\begin{equation}
+    A_{ij}
+    =
+    \frac{
+        \exp(q_i^Tk_j/\sqrt d)
+    }{
+        \sum_{j'}
+        \exp(q_i^Tk_{j'}/\sqrt d)
+    }.
+\end{equation}
+
+Unlike a fixed feature map, the representation of one token depends on the
+other tokens in the context.
+
+This raises the question of \emph{in-context learning}: how can the forward
+pass of a trained transformer implement something that resembles a learning
+algorithm?
+
+Schematically,
+\begin{equation}
+    \text{context examples}
+    \rightarrow
+    \text{internal representation}
+    \rightarrow
+    \text{new prediction}.
+\end{equation}
+
+One viewpoint is that training does not merely teach the model a fixed
+input-output function; it can teach the model an \emph{algorithm for extracting
+a task from context}.
+
+
+% ============================================================
+\section{Topic III: Diffusion Models}
+
+\subsection{Generative Modeling}
+
+Suppose the data are drawn from an unknown high-dimensional distribution
+\begin{equation}
+    x_0\sim \rho_0(x).
+\end{equation}
+
+For example, $x_0$ may be an image.
+
+The goal of a generative model is not merely to predict a label. Instead, we
+want to generate a new sample
+\begin{equation}
+    x_{\mathrm{new}}
+    \sim
+    \rho_0.
+\end{equation}
+
+The main difficulty is that $\rho_0(x)$ can be an extremely complicated
+distribution in a very high-dimensional space.
+
+
+% ------------------------------------------------------------
+\subsection{Forward Diffusion Process}
+
+Diffusion models introduce a continuous family of distributions
+\begin{equation}
+    \rho_t,
+    \qquad
+    t\in[0,T],
+\end{equation}
+such that
+\begin{equation}
+    \rho_{t=0}
+    =
+    \rho_{\mathrm{data}},
+\end{equation}
+while
+\begin{equation}
+    \rho_T
+    \approx
+    \mathcal N(0,I).
+\end{equation}
+
+The forward process gradually adds Gaussian noise.
+
+A common parametrization is
+\begin{equation}
+    \boxed{
+    x_t
+    =
+    \alpha_t x_0
+    +
+    \sigma_t\epsilon,
+    \qquad
+    \epsilon\sim\mathcal N(0,I).
+    }
+\end{equation}
+
+Initially,
+\begin{equation}
+    \alpha_0\approx1,
+    \qquad
+    \sigma_0\approx0,
+\end{equation}
+so
+\begin{equation}
+    x_t\approx x_0.
+\end{equation}
+
+At sufficiently large $t$,
+\begin{equation}
+    \alpha_T\approx0,
+    \qquad
+    \sigma_T\approx1,
+\end{equation}
+so
+\begin{equation}
+    x_T\approx\epsilon
+    \sim\mathcal N(0,I).
+\end{equation}
+
+Thus,
+\begin{equation}
+    \boxed{
+    \text{complicated data distribution}
+    \rightarrow
+    \text{simple Gaussian distribution}.
+    }
+\end{equation}
+
+
+% ------------------------------------------------------------
+\subsection{The Score Function}
+
+Define the score of the intermediate distribution $\rho_t$ by
+\begin{equation}
+    \boxed{
+    s_t(x)
+    =
+    \nabla_x
+    \log \rho_t(x).
+    }
+\end{equation}
+
+The score is a vector field in data space.
+
+Intuitively, $s_t(x)$ points toward directions in which the probability density
+increases most rapidly.
+
+For a one-dimensional Gaussian,
+\begin{equation}
+    \rho(x)
+    \propto
+    e^{-x^2/(2\sigma^2)},
+\end{equation}
+we have
+\begin{equation}
+    s(x)
+    =
+    \frac{d}{dx}\log\rho(x)
+    =
+    -\frac{x}{\sigma^2}.
+\end{equation}
+
+Therefore the score points back toward the high-probability region near
+$x=0$.
+
+
+% ------------------------------------------------------------
+\subsection{Why Is the Score Enough?}
+
+Suppose the forward diffusion is described by the stochastic differential
+equation
+\begin{equation}
+    dx
+    =
+    f(x,t)\,dt
+    +
+    g(t)\,dW_t.
+\end{equation}
+
+The evolution of the probability density is described by a Fokker--Planck
+equation.
+
+Remarkably, the corresponding reverse-time stochastic dynamics can be written
+in terms of the score:
+\begin{equation}
+    dx
+    =
+    \left[
+        f(x,t)
+        -
+        g(t)^2
+        \nabla_x\log\rho_t(x)
+    \right]dt
+    +
+    g(t)d\overline W_t,
+\end{equation}
+where the equation is integrated from $t=T$ back toward $t=0$.
+
+Therefore, if we know
+\begin{equation}
+    s_t(x)
+    =
+    \nabla_x\log\rho_t(x)
+\end{equation}
+for every $t$, we can reverse the noising process.
+
+The central idea is consequently
+\begin{equation}
+    \boxed{
+    \text{learn the score}
+    \quad\Longrightarrow\quad
+    \text{reverse diffusion}
+    \quad\Longrightarrow\quad
+    \text{generate data}.
+    }
+\end{equation}
+
+
+% ------------------------------------------------------------
+\subsection{Learning the Score}
+
+Introduce a neural network
+\begin{equation}
+    s_\theta(x,t)
+\end{equation}
+that approximates
+\begin{equation}
+    \nabla_x\log\rho_t(x).
+\end{equation}
+
+For the Gaussian corruption
+\begin{equation}
+    x_t
+    =
+    \alpha_t x_0
+    +
+    \sigma_t\epsilon,
+\end{equation}
+the conditional distribution is
+\begin{equation}
+    p(x_t\mid x_0)
+    =
+    \mathcal N(
+        \alpha_t x_0,
+        \sigma_t^2 I
+    ).
+\end{equation}
+
+Its score is known exactly:
+\begin{equation}
+    \nabla_{x_t}
+    \log p(x_t\mid x_0)
+    =
+    -
+    \frac{
+        x_t-\alpha_t x_0
+    }{
+        \sigma_t^2
+    }.
+\end{equation}
+
+Since
+\begin{equation}
+    x_t-\alpha_t x_0
+    =
+    \sigma_t\epsilon,
+\end{equation}
+this becomes
+\begin{equation}
+    \nabla_{x_t}
+    \log p(x_t\mid x_0)
+    =
+    -
+    \frac{\epsilon}{\sigma_t}.
+\end{equation}
+
+Therefore one can train the network using denoising score matching:
+\begin{equation}
+    \mathcal L_{\mathrm{score}}(\theta)
+    =
+    \mathbb E_{
+        t,x_0,\epsilon
+    }
+    \left[
+        \lambda(t)
+        \left\|
+        s_\theta(x_t,t)
+        +
+        \frac{\epsilon}{\sigma_t}
+        \right\|^2
+    \right].
+\end{equation}
+
+Thus the training problem can be reduced to a supervised regression problem
+with artificially generated Gaussian noise.
+
+
+% ------------------------------------------------------------
+\subsection{Equivalent Noise-Prediction Formulation}
+
+Instead of directly predicting the score, many diffusion models predict the
+noise
+\begin{equation}
+    \epsilon_\theta(x_t,t).
+\end{equation}
+
+Since
+\begin{equation}
+    s_t(x_t)
+    \sim
+    -
+    \frac{\epsilon}{\sigma_t},
+\end{equation}
+the two representations are directly related:
+\begin{equation}
+    s_\theta(x_t,t)
+    =
+    -
+    \frac{
+        \epsilon_\theta(x_t,t)
+    }{
+        \sigma_t
+    }.
+\end{equation}
+
+The corresponding loss is approximately
+\begin{equation}
+    \mathcal L_\epsilon
+    =
+    \mathbb E
+    \left[
+        \left\|
+        \epsilon
+        -
+        \epsilon_\theta(x_t,t)
+        \right\|^2
+    \right].
+\end{equation}
+
+
+% ------------------------------------------------------------
+\subsection{Probability-Flow ODE}
+
+The stochastic reverse dynamics are not the only way to generate samples.
+
+The same family of marginal distributions $\rho_t$ can also be reproduced by
+a deterministic probability-flow ODE,
+\begin{equation}
+    \frac{dx}{dt}
+    =
+    f(x,t)
+    -
+    \frac{1}{2}
+    g(t)^2
+    s_t(x).
+\end{equation}
+
+Thus diffusion models can be understood either as
+\begin{equation}
+    \text{stochastic reverse dynamics}
+\end{equation}
+or as
+\begin{equation}
+    \text{deterministic transport through probability space}.
+\end{equation}
+
+This also provides a connection to flow-based generative models and flow
+matching.
+
+
+% ------------------------------------------------------------
+\subsection{Geometrical Picture}
+
+At large noise,
+\begin{equation}
+    \rho_T(x)
+    \approx
+    \mathcal N(0,I),
+\end{equation}
+which is simple.
+
+As $t$ decreases, the score field gradually guides samples toward the
+high-probability regions of the data distribution.
+
+Schematically,
+\begin{equation}
+    \text{Gaussian noise}
+    \rightarrow
+    \text{coarse structure}
+    \rightarrow
+    \text{objects}
+    \rightarrow
+    \text{fine details}.
+\end{equation}
+
+In this sense, the neural network learns a time-dependent vector field
+\begin{equation}
+    s_\theta(x,t)
+\end{equation}
+that describes the geometry of the probability distribution at different noise
+scales.
+
+% WEBFIG: diffusion
+
+
+% ------------------------------------------------------------
+\subsection{Main Questions for Diffusion Models}
+
+Important theoretical questions include:
+
+\begin{enumerate}
+    \item Why is the score easier to learn than the probability density itself?
+
+    \item Why does adding noise make the learning problem easier?
+
+    \item How accurately must the score be learned in order to generate accurate
+    samples?
+
+    \item How does error accumulate during the reverse process?
+
+    \item Why do diffusion models scale so effectively with model size and data?
+
+    \item What representations are learned by the denoising network?
+
+    \item What is the relation between diffusion models, optimal transport,
+    normalizing flows, and flow matching?
+
+    \item How many reverse-time steps are fundamentally necessary?
+
+    \item Which aspects of the data distribution are learned at large noise and
+    which are learned only at small noise?
+\end{enumerate}
+
+
+% ============================================================
+\section{Relations Between the Three Topics}
+
+Although scaling laws, feature learning, and diffusion models initially look
+like separate topics, they are closely connected.
+
+\subsection{Scaling and Feature Learning}
+
+The infinite-width limit used in NTK theory can suppress feature learning:
+\begin{equation}
+    \text{width}\rightarrow\infty
+    \quad\Rightarrow\quad
+    \text{features approximately frozen}.
+\end{equation}
+
+Therefore an important question is which scaling limit retains the rich feature
+learning observed in practical neural networks.
+
+This illustrates why different limits need not commute.
+
+
+\subsection{Feature Learning and Diffusion}
+
+A diffusion model is trained to estimate
+\begin{equation}
+    s_t(x)
+    =
+    \nabla_x\log\rho_t(x)
+\end{equation}
+at many noise levels.
+
+To do this, the network must learn useful internal representations of the data.
+
+At large $t$, these representations may encode coarse global structure,
+whereas at small $t$ they must encode increasingly fine details.
+
+Thus diffusion models provide a natural laboratory for studying how
+representations depend on scale.
+
+
+\subsection{Scaling and Generative Modeling}
+
+A generative model must represent an entire probability distribution rather
+than merely a decision boundary.
+
+This raises particularly sharp scaling questions:
+\begin{equation}
+    \text{How much model capacity and data are required to represent}
+    \quad
+    \rho_{\mathrm{data}}?
+\end{equation}
+
+One may therefore study scaling laws such as
+\begin{equation}
+    \mathcal L_{\mathrm{gen}}
+    =
+    \mathcal L(N,n,C),
+\end{equation}
+and ask whether the same scaling ideas observed in supervised learning also
+govern modern generative models.
+
+
+% ============================================================
+\section{Big Picture}
+
+The three topics can be summarized as follows.
+
+\begin{center}
+\begin{tabular}{c|c}
+\textbf{Topic} & \textbf{Central Question}\\
+\hline
+Scaling
+&
+What simple theory emerges when neural networks become very large?
+\\[4pt]
+Feature learning
+&
+What internal representation does training discover?
+\\[4pt]
+Diffusion
+&
+How can a neural network learn and sample from an entire distribution?
+\end{tabular}
+\end{center}
+
+A common theme is the search for an effective theory of learning:
+\begin{equation}
+    \boxed{
+    \text{microscopic parameter dynamics}
+    \quad\longrightarrow\quad
+    \text{macroscopic laws of learning}.
+    }
+\end{equation}
+
+From a statistical-physics perspective, neural networks are particularly
+interesting because they are large interacting dynamical systems whose
+effective degrees of freedom, representations, and scaling laws are themselves
+learned from data.

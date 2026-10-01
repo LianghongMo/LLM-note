@@ -1,0 +1,993 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lecture 1: Three Questions in Deep-Learning Theory · LLM-note</title>
+<meta name="description" content="Neural networks as parametrized families of functions, and the three questions the notes are built around: what simple theory emerges at large scale, what features training discovers, and how a diffusion model learns and samples an entire distribution.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap">
+<link rel="stylesheet" href="assets/site.css">
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(', '\\)']], displayMath: [['\\[', '\\]']] },
+  svg: { fontCache: 'global' },
+  options: { skipHtmlTags: ['script', 'style', 'textarea', 'code', 'canvas'] }
+};
+</script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-svg.min.js"></script>
+<script defer src="assets/site.js"></script>
+</head>
+<body>
+<header class="topbar">
+  <a class="wordmark" href="index.html">LLM-note</a>
+  <nav aria-label="Site">
+    <a href="lecture1.html" aria-current="page">Lecture 1</a>
+    <a href="lecture2.html">Lecture 2</a>
+    <a href="notes/LLM-note.pdf">PDF</a>
+    <a href="https://github.com/LianghongMo/LLM-note">Source</a>
+  </nav>
+</header>
+<div class="layout">
+  <aside class="toc-rail" aria-label="Contents">
+    <p class="kicker">Lecture 1 contents</p>
+    <nav class="toc"><ol><li><a href="#introduction"><span class="secnum">1.1</span> Introduction</a>
+<ol>
+<li><a href="#definition-of-neural-networks"><span class="secnum">1.1.1</span> Definition of Neural Networks</a></li>
+<li><a href="#how-neural-networks-are-used"><span class="secnum">1.1.2</span> How Neural Networks Are Used</a></li>
+<li><a href="#three-main-topics"><span class="secnum">1.1.3</span> Three Main Topics</a></li>
+</ol></li>
+<li><a href="#topic-i-scaling-laws-and-large-network-limits"><span class="secnum">1.2</span> Topic I: Scaling Laws and Large-Network Limits</a>
+<ol>
+<li><a href="#basic-questions"><span class="secnum">1.2.1</span> Basic Questions</a></li>
+<li><a href="#empirical-scaling-laws"><span class="secnum">1.2.2</span> Empirical Scaling Laws</a></li>
+<li><a href="#optimization-approximation-and-data-errors"><span class="secnum">1.2.3</span> Optimization, Approximation, and Data Errors</a></li>
+<li><a href="#theoretical-approaches"><span class="secnum">1.2.4</span> Theoretical Approaches</a></li>
+<li><a href="#important-distinction-scaling-is-not-just-more-parameters"><span class="secnum">1.2.5</span> Important Distinction: Scaling Is Not Just “More Parameters”</a></li>
+</ol></li>
+<li><a href="#topic-ii-feature-learning-and-representation-learning"><span class="secnum">1.3</span> Topic II: Feature Learning and Representation Learning</a>
+<ol>
+<li><a href="#linear-models"><span class="secnum">1.3.1</span> Linear Models</a></li>
+<li><a href="#neural-networks-learn-the-features"><span class="secnum">1.3.2</span> Neural Networks Learn the Features</a></li>
+<li><a href="#the-central-feature-learning-question"><span class="secnum">1.3.3</span> The Central Feature-Learning Question</a></li>
+<li><a href="#a-minimal-two-layer-model"><span class="secnum">1.3.4</span> A Minimal Two-Layer Model</a></li>
+<li><a href="#what-is-a-semantic-feature"><span class="secnum">1.3.5</span> What Is a Semantic Feature?</a></li>
+<li><a href="#distributed-representations-and-superposition"><span class="secnum">1.3.6</span> Distributed Representations and Superposition</a></li>
+<li><a href="#feature-geometry"><span class="secnum">1.3.7</span> Feature Geometry</a></li>
+<li><a href="#transformers-and-in-context-learning"><span class="secnum">1.3.8</span> Transformers and In-Context Learning</a></li>
+</ol></li>
+<li><a href="#topic-iii-diffusion-models"><span class="secnum">1.4</span> Topic III: Diffusion Models</a>
+<ol>
+<li><a href="#generative-modeling"><span class="secnum">1.4.1</span> Generative Modeling</a></li>
+<li><a href="#forward-diffusion-process"><span class="secnum">1.4.2</span> Forward Diffusion Process</a></li>
+<li><a href="#the-score-function"><span class="secnum">1.4.3</span> The Score Function</a></li>
+<li><a href="#why-is-the-score-enough"><span class="secnum">1.4.4</span> Why Is the Score Enough?</a></li>
+<li><a href="#learning-the-score"><span class="secnum">1.4.5</span> Learning the Score</a></li>
+<li><a href="#equivalent-noise-prediction-formulation"><span class="secnum">1.4.6</span> Equivalent Noise-Prediction Formulation</a></li>
+<li><a href="#probability-flow-ode"><span class="secnum">1.4.7</span> Probability-Flow ODE</a></li>
+<li><a href="#geometrical-picture"><span class="secnum">1.4.8</span> Geometrical Picture</a></li>
+<li><a href="#main-questions-for-diffusion-models"><span class="secnum">1.4.9</span> Main Questions for Diffusion Models</a></li>
+</ol></li>
+<li><a href="#relations-between-the-three-topics"><span class="secnum">1.5</span> Relations Between the Three Topics</a>
+<ol>
+<li><a href="#scaling-and-feature-learning"><span class="secnum">1.5.1</span> Scaling and Feature Learning</a></li>
+<li><a href="#feature-learning-and-diffusion"><span class="secnum">1.5.2</span> Feature Learning and Diffusion</a></li>
+<li><a href="#scaling-and-generative-modeling"><span class="secnum">1.5.3</span> Scaling and Generative Modeling</a></li>
+</ol></li>
+<li><a href="#big-picture"><span class="secnum">1.6</span> Big Picture</a>
+</li></ol></nav>
+  </aside>
+  <main class="article" id="top">
+    <header class="lecture-head">
+      <p class="kicker">Lecture 1</p>
+      <h1>Three Questions in Deep-Learning Theory</h1>
+      <p class="lede">Neural networks as parametrized families of functions, and the three questions the notes are built around: what simple theory emerges at large scale, what features training discovers, and how a diffusion model learns and samples an entire distribution.</p>
+      <p class="head-formula">\(\text{Architecture}+\text{Data}+\text{Optimization}\;\Longrightarrow\;f_{\theta}\)</p>
+    </header>
+    <aside class="keyideas" aria-label="Key ideas">
+      <p class="kicker">Key ideas</p>
+      
+<ul>
+<li><p>A neural network is a parametrized family of functions; what it learns is fixed jointly by the architecture, the data, and the optimization algorithm.</p></li>
+<li><p><strong>Scaling:</strong> which simple effective theory emerges as <span class="math inline">\(N,n,L,W,C\to\infty\)</span> (NTK, mean field, DMFT, Gaussian processes), and why these limits need not commute.</p></li>
+<li><p><strong>Feature learning:</strong> a network learns the feature map <span class="math inline">\(\Phi_\theta(x)\)</span> itself, not only its coefficients; features are directions in activation space and can be stored in superposition.</p></li>
+<li><p><strong>Diffusion:</strong> learning the score <span class="math inline">\(\nabla_x\log\rho_t\)</span> by denoising is enough to reverse a noising process and sample from <span class="math inline">\(\rho_{\mathrm{data}}\)</span>.</p></li>
+</ul>
+
+    </aside>
+    <details class="toc-inline">
+      <summary>Contents</summary>
+      <nav class="toc"><ol><li><a href="#introduction"><span class="secnum">1.1</span> Introduction</a>
+<ol>
+<li><a href="#definition-of-neural-networks"><span class="secnum">1.1.1</span> Definition of Neural Networks</a></li>
+<li><a href="#how-neural-networks-are-used"><span class="secnum">1.1.2</span> How Neural Networks Are Used</a></li>
+<li><a href="#three-main-topics"><span class="secnum">1.1.3</span> Three Main Topics</a></li>
+</ol></li>
+<li><a href="#topic-i-scaling-laws-and-large-network-limits"><span class="secnum">1.2</span> Topic I: Scaling Laws and Large-Network Limits</a>
+<ol>
+<li><a href="#basic-questions"><span class="secnum">1.2.1</span> Basic Questions</a></li>
+<li><a href="#empirical-scaling-laws"><span class="secnum">1.2.2</span> Empirical Scaling Laws</a></li>
+<li><a href="#optimization-approximation-and-data-errors"><span class="secnum">1.2.3</span> Optimization, Approximation, and Data Errors</a></li>
+<li><a href="#theoretical-approaches"><span class="secnum">1.2.4</span> Theoretical Approaches</a></li>
+<li><a href="#important-distinction-scaling-is-not-just-more-parameters"><span class="secnum">1.2.5</span> Important Distinction: Scaling Is Not Just “More Parameters”</a></li>
+</ol></li>
+<li><a href="#topic-ii-feature-learning-and-representation-learning"><span class="secnum">1.3</span> Topic II: Feature Learning and Representation Learning</a>
+<ol>
+<li><a href="#linear-models"><span class="secnum">1.3.1</span> Linear Models</a></li>
+<li><a href="#neural-networks-learn-the-features"><span class="secnum">1.3.2</span> Neural Networks Learn the Features</a></li>
+<li><a href="#the-central-feature-learning-question"><span class="secnum">1.3.3</span> The Central Feature-Learning Question</a></li>
+<li><a href="#a-minimal-two-layer-model"><span class="secnum">1.3.4</span> A Minimal Two-Layer Model</a></li>
+<li><a href="#what-is-a-semantic-feature"><span class="secnum">1.3.5</span> What Is a Semantic Feature?</a></li>
+<li><a href="#distributed-representations-and-superposition"><span class="secnum">1.3.6</span> Distributed Representations and Superposition</a></li>
+<li><a href="#feature-geometry"><span class="secnum">1.3.7</span> Feature Geometry</a></li>
+<li><a href="#transformers-and-in-context-learning"><span class="secnum">1.3.8</span> Transformers and In-Context Learning</a></li>
+</ol></li>
+<li><a href="#topic-iii-diffusion-models"><span class="secnum">1.4</span> Topic III: Diffusion Models</a>
+<ol>
+<li><a href="#generative-modeling"><span class="secnum">1.4.1</span> Generative Modeling</a></li>
+<li><a href="#forward-diffusion-process"><span class="secnum">1.4.2</span> Forward Diffusion Process</a></li>
+<li><a href="#the-score-function"><span class="secnum">1.4.3</span> The Score Function</a></li>
+<li><a href="#why-is-the-score-enough"><span class="secnum">1.4.4</span> Why Is the Score Enough?</a></li>
+<li><a href="#learning-the-score"><span class="secnum">1.4.5</span> Learning the Score</a></li>
+<li><a href="#equivalent-noise-prediction-formulation"><span class="secnum">1.4.6</span> Equivalent Noise-Prediction Formulation</a></li>
+<li><a href="#probability-flow-ode"><span class="secnum">1.4.7</span> Probability-Flow ODE</a></li>
+<li><a href="#geometrical-picture"><span class="secnum">1.4.8</span> Geometrical Picture</a></li>
+<li><a href="#main-questions-for-diffusion-models"><span class="secnum">1.4.9</span> Main Questions for Diffusion Models</a></li>
+</ol></li>
+<li><a href="#relations-between-the-three-topics"><span class="secnum">1.5</span> Relations Between the Three Topics</a>
+<ol>
+<li><a href="#scaling-and-feature-learning"><span class="secnum">1.5.1</span> Scaling and Feature Learning</a></li>
+<li><a href="#feature-learning-and-diffusion"><span class="secnum">1.5.2</span> Feature Learning and Diffusion</a></li>
+<li><a href="#scaling-and-generative-modeling"><span class="secnum">1.5.3</span> Scaling and Generative Modeling</a></li>
+</ol></li>
+<li><a href="#big-picture"><span class="secnum">1.6</span> Big Picture</a>
+</li></ol></nav>
+    </details>
+    <div class="prose">
+<section id="introduction" class="level2">
+<h2><span class="secnum">1.1</span> Introduction<a class="anchor" href="#introduction" aria-label="Link to this section">#</a></h2>
+<p>A useful viewpoint is that a neural network is a <em>parametrized family of functions</em>. We choose an architecture, which determines a family <span class="math display">\[\left\{
+    f_\theta:\mathcal X\rightarrow\mathcal Y
+    \right\}_{\theta\in\Theta},\]</span> and learning consists of selecting the parameter <span class="math inline">\(\theta\)</span> using data.</p>
+<p>Thus there are three conceptually distinct ingredients:</p>
+<ol>
+<li><p>the <strong>architecture</strong>, which specifies the function class;</p></li>
+<li><p>the <strong>data</strong>, which provide information about the unknown target;</p></li>
+<li><p>the <strong>optimization algorithm</strong>, which determines which member of the function class is actually learned.</p></li>
+</ol>
+<p>One of the central questions in the theory of neural networks is therefore <span class="math display">\[\boxed{
+    \text{Architecture}
+    +
+    \text{Data}
+    +
+    \text{Optimization}
+    \quad
+    \Longrightarrow
+    \quad
+    \text{Learned function / representation}.
+    }\]</span></p>
+<section id="definition-of-neural-networks" class="level3">
+<h3><span class="secnum">1.1.1</span> Definition of Neural Networks<a class="anchor" href="#definition-of-neural-networks" aria-label="Link to this section">#</a></h3>
+<section id="fully-connected-neural-networks" class="level4">
+<h4><span class="secnum">1.1.1.1</span> Fully connected neural networks<a class="anchor" href="#fully-connected-neural-networks" aria-label="Link to this section">#</a></h4>
+<p>Consider an input <span class="math display">\[x\in\mathbb R^{N_0}.\]</span> Define <span class="math display">\[z^{(0)}(x)=x.\]</span> A fully connected neural network with <span class="math inline">\(L+1\)</span> layers is recursively defined by <span class="math display">\[z^{(\ell+1)}(x)
+    =
+    W^{(\ell+1)}
+    \phi\!\left(z^{(\ell)}(x)\right)
+    +
+    b^{(\ell+1)},
+    \qquad
+    \ell=0,\ldots,L,\]</span> where <span class="math display">\[W^{(\ell+1)}
+    \in
+    \mathbb R^{N_{\ell+1}\times N_\ell},
+    \qquad
+    b^{(\ell+1)}
+    \in
+    \mathbb R^{N_{\ell+1}},\]</span> and <span class="math inline">\(\phi\)</span> is a nonlinear activation function applied componentwise.<a href="#fn1" class="footnote-ref" id="fnref1" role="doc-noteref"><sup>1</sup></a></p>
+<p>Typical choices include <span class="math display">\[\begin{aligned}
+    \mathrm{ReLU}(x)&amp;=\max(0,x),\\
+    \tanh(x)&amp;=\frac{e^x-e^{-x}}{e^x+e^{-x}},\\
+    \mathrm{GELU}(x)&amp;=x\Phi(x),\end{aligned}\]</span> where <span class="math inline">\(\Phi\)</span> is the standard Gaussian cumulative distribution function.</p>
+<p>The output of the network is <span class="math display">\[f_\theta(x)
+    \equiv
+    z^{(L+1)}(x),\]</span> where the parameter set is <span class="math display">\[\theta
+    =
+    \left\{
+    W^{(1)},\ldots,W^{(L+1)},
+    b^{(1)},\ldots,b^{(L+1)}
+    \right\}.\]</span></p>
+<p>The nonlinear activation is essential. Without <span class="math inline">\(\phi\)</span>, a composition of linear layers would still be only a linear transformation: <span class="math display">\[W^{(L)}W^{(L-1)}\cdots W^{(1)}x
+    =
+    W_{\mathrm{eff}}x.\]</span></p>
+</section>
+<section id="residual-neural-networks" class="level4">
+<h4><span class="secnum">1.1.1.2</span> Residual neural networks<a class="anchor" href="#residual-neural-networks" aria-label="Link to this section">#</a></h4>
+<p>Instead of replacing the current representation at every layer, a residual network learns a correction: <span class="math display">\[z^{(\ell+1)}
+    =
+    z^{(\ell)}
+    +
+    F_{\theta_\ell}\!\left(z^{(\ell)}\right).\]</span></p>
+<p>A typical residual block is <span class="math display">\[F_{\theta_\ell}(z)
+    =
+    W_2^{(\ell)}
+    \phi\!\left(
+        W_1^{(\ell)}z+b_1^{(\ell)}
+    \right)
+    +
+    b_2^{(\ell)}.\]</span></p>
+<p>Therefore, <span class="math display">\[z^{(\ell+1)}
+    =
+    z^{(\ell)}
+    +
+    W_2^{(\ell)}
+    \phi\!\left(
+        W_1^{(\ell)}z^{(\ell)}
+        +
+        b_1^{(\ell)}
+    \right)
+    +
+    b_2^{(\ell)}.\]</span></p>
+<p>The important physical picture is that each layer makes only an incremental update, <span class="math display">\[\Delta z^{(\ell)}
+    =
+    F_{\theta_\ell}(z^{(\ell)}).\]</span></p>
+<p>In a formal continuum-depth limit, a residual network resembles a dynamical system, <span class="math display">\[\frac{dz(t)}{dt}
+    =
+    F_{\theta(t)}(z(t)),\]</span> which motivates the connection between residual networks and differential equations.</p>
+</section>
+</section>
+<section id="how-neural-networks-are-used" class="level3">
+<h3><span class="secnum">1.1.2</span> How Neural Networks Are Used<a class="anchor" href="#how-neural-networks-are-used" aria-label="Link to this section">#</a></h3>
+<p>Suppose there is an unknown target function <span class="math display">\[f:\mathcal X\rightarrow\mathcal Y.\]</span> We observe a training dataset <span class="math display">\[\mathcal D
+    =
+    \left\{
+    (x_i,y_i)
+    \right\}_{i=1}^{n},
+    \qquad
+    y_i=f(x_i),\]</span> where <span class="math inline">\(n\)</span> denotes the number of training samples.</p>
+<p>The standard supervised-learning procedure is:</p>
+<ol>
+<li><p><strong>Data:</strong> observe <span class="math display">\[\left\{
+        (x_i,f(x_i))
+        \right\}_{i=1}^n.\]</span> The goal is to infer the unknown function <span class="math inline">\(f\)</span> from finitely many observations.</p></li>
+<li><p><strong>Initialization:</strong> choose an initial parameter <span class="math display">\[\theta_0
+        \sim
+        P_{\mathrm{init}}.\]</span></p></li>
+<li><p><strong>Optimization:</strong> minimize a loss function. For regression, a common choice is <span class="math display">\[\mathcal L(\theta)
+        =
+        \frac{1}{2n}
+        \sum_{i=1}^n
+        \left\|
+        f(x_i)-f_\theta(x_i)
+        \right\|^2.\]</span></p>
+<p>Gradient descent gives <span class="math display">\[\theta_{t+1}
+        =
+        \theta_t
+        -
+        \eta
+        \nabla_\theta
+        \mathcal L(\theta_t),\]</span> where <span class="math inline">\(\eta\)</span> is the learning rate.</p>
+<p>In practice one usually uses stochastic gradient descent, <span class="math display">\[\theta_{t+1}
+        =
+        \theta_t
+        -
+        \eta
+        \widehat{\nabla_\theta \mathcal L},\]</span> where the gradient is estimated from a minibatch.</p></li>
+<li><p><strong>Generalization / test:</strong> for a new point <span class="math inline">\(x_{\mathrm{new}}\)</span> that was not in the training set, ask whether <span class="math display">\[f(x_{\mathrm{new}})
+        \approx
+        f_{\theta_{\mathrm{learned}}}(x_{\mathrm{new}}).\]</span></p></li>
+</ol>
+<p>A neural network is therefore not useful merely because it can fit the training data. The central problem is whether it can <em>generalize</em>.</p>
+</section>
+<section id="three-main-topics" class="level3">
+<h3><span class="secnum">1.1.3</span> Three Main Topics<a class="anchor" href="#three-main-topics" aria-label="Link to this section">#</a></h3>
+<p>We focus on three broad theoretical questions:</p>
+<ol>
+<li><p><strong>Scaling laws and large-network limits:</strong> What happens as the model size, dataset size, and computational budget become very large?</p></li>
+<li><p><strong>Feature learning and representation learning:</strong> What internal representations does the neural network learn, and why do these representations help generalization?</p></li>
+<li><p><strong>Generative models, especially diffusion models:</strong> How can a neural network learn an entire high-dimensional probability distribution and generate new samples from it?</p></li>
+</ol>
+</section>
+</section>
+<section id="topic-i-scaling-laws-and-large-network-limits" class="level2">
+<h2><span class="secnum">1.2</span> Topic I: Scaling Laws and Large-Network Limits<a class="anchor" href="#topic-i-scaling-laws-and-large-network-limits" aria-label="Link to this section">#</a></h2>
+<section id="basic-questions" class="level3">
+<h3><span class="secnum">1.2.1</span> Basic Questions<a class="anchor" href="#basic-questions" aria-label="Link to this section">#</a></h3>
+<p>Modern neural networks involve several potentially large parameters: <span class="math display">\[\begin{aligned}
+    N &amp;=
+    \text{number of model parameters},\\
+    n &amp;=
+    \text{number of training samples},\\
+    L &amp;=
+    \text{depth},\\
+    W &amp;=
+    \text{width},\\
+    C &amp;=
+    \text{computational budget}.\end{aligned}\]</span></p>
+<p>The theoretical problem resembles statistical mechanics: instead of studying one finite neural network in detail, we would like to identify simple laws that emerge in appropriate large-scale limits.</p>
+<p>Some central questions are:</p>
+<ol>
+<li><p>What happens when <span class="math display">\[N,n,L,W,C\rightarrow\infty?\]</span></p>
+<p>These limits need not commute. For example, <span class="math display">\[\lim_{n\rightarrow\infty}
+        \lim_{W\rightarrow\infty}\]</span> may describe a different regime from <span class="math display">\[\lim_{W\rightarrow\infty}
+        \lim_{n\rightarrow\infty}.\]</span></p>
+<p>Therefore the interesting object is often a <em>joint scaling limit</em>, analogous to a thermodynamic limit.</p></li>
+<li><p>Does a complicated neural network reduce to a simpler effective theory in such a limit?</p></li>
+<li><p>Can performance at very large scale be predicted from experiments at relatively small scale?</p></li>
+<li><p>Which resource is the bottleneck: <span class="math display">\[\text{model size},\qquad
+        \text{data},\qquad
+        \text{optimization},\qquad
+        \text{compute}?\]</span></p></li>
+<li><p>When does increasing the model size actually improve performance, and when does performance saturate?</p></li>
+</ol>
+</section>
+<section id="empirical-scaling-laws" class="level3">
+<h3><span class="secnum">1.2.2</span> Empirical Scaling Laws<a class="anchor" href="#empirical-scaling-laws" aria-label="Link to this section">#</a></h3>
+<p>Empirically, many machine-learning systems approximately obey power-law scaling over a substantial range of scales.</p>
+<p>For example, test loss may behave as <span class="math display">\[\boxed{
+    \mathcal L(C)
+    =
+    \mathcal L_\infty
+    +
+    A C^{-\beta},
+    }\]</span> where <span class="math display">\[C=\text{compute},\]</span> <span class="math inline">\(\beta&gt;0\)</span> is a scaling exponent, and <span class="math inline">\(\mathcal L_\infty\)</span> is an irreducible loss floor.</p>
+<p>Similarly one may study <span class="math display">\[\begin{aligned}
+    \mathcal L(N)
+    &amp;\approx
+    \mathcal L_\infty
+    +
+    A_N N^{-\alpha_N},
+    \\
+    \mathcal L(n)
+    &amp;\approx
+    \mathcal L_\infty
+    +
+    A_n n^{-\alpha_n}.\end{aligned}\]</span></p>
+<p>More generally, <span class="math display">\[\mathcal L
+    =
+    \mathcal L(N,n,C,\ldots).\]</span></p>
+<p>The interesting theoretical questions are not only whether these power laws exist, but also:</p>
+<ol>
+<li><p>why power laws emerge;</p></li>
+<li><p>whether the exponents are universal;</p></li>
+<li><p>how the exponents depend on the data distribution and architecture;</p></li>
+<li><p>how to optimally allocate a fixed computational budget between increasing <span class="math inline">\(N\)</span>, increasing <span class="math inline">\(n\)</span>, and training for longer.</p></li>
+</ol>
+</section>
+<section id="optimization-approximation-and-data-errors" class="level3">
+<h3><span class="secnum">1.2.3</span> Optimization, Approximation, and Data Errors<a class="anchor" href="#optimization-approximation-and-data-errors" aria-label="Link to this section">#</a></h3>
+<p>It is useful to conceptually decompose the total error into several pieces: <span class="math display">\[\mathcal E_{\mathrm{total}}
+    \sim
+    \mathcal E_{\mathrm{approx}}
+    +
+    \mathcal E_{\mathrm{estimation}}
+    +
+    \mathcal E_{\mathrm{optimization}}.\]</span></p>
+<p>Here:</p>
+<ul>
+<li><p><span class="math inline">\(\mathcal E_{\mathrm{approx}}\)</span> measures whether the architecture is expressive enough to represent the desired function;</p></li>
+<li><p><span class="math inline">\(\mathcal E_{\mathrm{estimation}}\)</span> arises because the training dataset is finite;</p></li>
+<li><p><span class="math inline">\(\mathcal E_{\mathrm{optimization}}\)</span> measures whether the optimizer succeeds in finding a good parameter configuration.</p></li>
+</ul>
+<p>Scaling the number of parameters only directly attacks the first of these. Therefore increasing model size alone need not always improve performance.</p>
+</section>
+<section id="theoretical-approaches" class="level3">
+<h3><span class="secnum">1.2.4</span> Theoretical Approaches<a class="anchor" href="#theoretical-approaches" aria-label="Link to this section">#</a></h3>
+<section id="neural-tangent-kernel" class="level4">
+<h4><span class="secnum">1.2.4.1</span> Neural Tangent Kernel<a class="anchor" href="#neural-tangent-kernel" aria-label="Link to this section">#</a></h4>
+<p>Consider the network output <span class="math display">\[f_\theta(x).\]</span> Linearize it around the initialization <span class="math inline">\(\theta_0\)</span>: <span class="math display">\[f_\theta(x)
+    \approx
+    f_{\theta_0}(x)
+    +
+    \nabla_\theta f_{\theta_0}(x)^T
+    (\theta-\theta_0).\]</span></p>
+<p>Define the Neural Tangent Kernel <span class="math display">\[K_{\mathrm{NTK}}(x,x&#39;)
+    =
+    \nabla_\theta f_{\theta_0}(x)^T
+    \nabla_\theta f_{\theta_0}(x&#39;).\]</span></p>
+<p>In an appropriate infinite-width limit, the NTK becomes approximately deterministic and changes very little during training.</p>
+<p>The nonlinear neural-network training problem is then reduced to an effective kernel regression problem.</p>
+<p>The physical picture is <span class="math display">\[\boxed{
+    \text{very wide network}
+    \quad\Rightarrow\quad
+    \text{approximately fixed features}
+    +
+    \text{linearized dynamics}.
+    }\]</span></p>
+<p>This regime is often called the <em>lazy-training regime</em>.</p>
+<p>A major limitation is that realistic neural networks often exhibit substantial <em>feature learning</em>, whereas the simplest NTK limit freezes the features.</p>
+</section>
+<section id="sec:meanfield" class="level4">
+<h4><span class="secnum">1.2.4.2</span> Mean-Field Theory<a class="anchor" href="#sec:meanfield" aria-label="Link to this section">#</a></h4>
+<p>Another large-width limit treats individual neurons as interacting particles.</p>
+<p>Consider a two-layer network <span class="math display">\[f_m(x)
+    =
+    \frac{1}{m}
+    \sum_{j=1}^m
+    a_j
+    \sigma(w_j^T x).\]</span></p>
+<p>Instead of following every neuron separately, define an empirical distribution of neuron parameters, <span class="math display">\[\rho_m(a,w)
+    =
+    \frac{1}{m}
+    \sum_{j=1}^m
+    \delta(a-a_j)
+    \delta(w-w_j).\]</span></p>
+<p>As <span class="math display">\[m\rightarrow\infty,\]</span> one can sometimes derive a deterministic evolution equation for <span class="math display">\[\rho(a,w,t).\]</span></p>
+<p>Schematically, <span class="math display">\[\partial_t \rho
+    =
+    \mathcal F[\rho].\]</span></p>
+<p>This is analogous to the passage <span class="math display">\[\text{many particles}
+    \rightarrow
+    \text{continuum density}\]</span> in statistical mechanics.</p>
+<p>Unlike the simplest NTK regime, the distribution of features <span class="math inline">\(w\)</span> can evolve, so mean-field theory can describe genuine feature learning.</p>
+</section>
+<section id="dynamical-mean-field-theory" class="level4">
+<h4><span class="secnum">1.2.4.3</span> Dynamical Mean-Field Theory<a class="anchor" href="#dynamical-mean-field-theory" aria-label="Link to this section">#</a></h4>
+<p>For sufficiently complicated random neural networks, especially deep networks or recurrent systems, one can seek an effective stochastic description of a typical neuron or feature.</p>
+<p>The philosophy is analogous to dynamical mean-field theory in many-body physics: <span class="math display">\[\boxed{
+    \text{high-dimensional interacting system}
+    \rightarrow
+    \text{self-consistent effective single-site dynamics}.
+    }\]</span></p>
+<p>Instead of tracking every neuron explicitly, one derives self-consistency equations for quantities such as <span class="math display">\[\begin{aligned}
+    C(t,t&#39;)
+    &amp;=
+    \left\langle
+    z(t)z(t&#39;)
+    \right\rangle,
+    \\
+    R(t,t&#39;)
+    &amp;=
+    \frac{\delta \langle z(t)\rangle}
+    {\delta h(t&#39;)}.\end{aligned}\]</span></p>
+<p>These quantities play roles analogous to correlation and response functions in statistical physics.</p>
+</section>
+<section id="bayesian-inference" class="level4">
+<h4><span class="secnum">1.2.4.4</span> Bayesian Inference<a class="anchor" href="#bayesian-inference" aria-label="Link to this section">#</a></h4>
+<p>A different viewpoint is to place a prior distribution on the network parameters, <span class="math display">\[P(\theta),\]</span> and use Bayes’ rule: <span class="math display">\[P(\theta\mid\mathcal D)
+    =
+    \frac{
+        P(\mathcal D\mid\theta)P(\theta)
+    }{
+        P(\mathcal D)
+    }.\]</span></p>
+<p>Predictions are then obtained by averaging over the posterior: <span class="math display">\[P(y_\ast\mid x_\ast,\mathcal D)
+    =
+    \int
+    d\theta\,
+    P(y_\ast\mid x_\ast,\theta)
+    P(\theta\mid\mathcal D).\]</span></p>
+<p>For some infinitely wide neural networks, the prior over functions becomes a Gaussian process, <span class="math display">\[f(x)\sim\mathrm{GP}(0,K(x,x&#39;)).\]</span></p>
+<p>This provides another analytically tractable infinite-width limit.</p>
+</section>
+</section>
+<section id="important-distinction-scaling-is-not-just-more-parameters" class="level3">
+<h3><span class="secnum">1.2.5</span> Important Distinction: Scaling Is Not Just “More Parameters”<a class="anchor" href="#important-distinction-scaling-is-not-just-more-parameters" aria-label="Link to this section">#</a></h3>
+<p>When discussing scaling, one should distinguish several directions: <span class="math display">\[\begin{aligned}
+    \text{model scaling}
+    &amp;: N\rightarrow\infty,
+    \\
+    \text{data scaling}
+    &amp;: n\rightarrow\infty,
+    \\
+    \text{compute scaling}
+    &amp;: C\rightarrow\infty,
+    \\
+    \text{context / horizon scaling}
+    &amp;: T\rightarrow\infty.\end{aligned}\]</span></p>
+<p>Good scaling often requires these quantities to grow together.</p>
+<p>Thus, <span class="math display">\[\boxed{
+    \text{Scaling up the model}
+    \neq
+    \text{scaling up the learning problem}.
+    }\]</span></p>
+</section>
+</section>
+<section id="topic-ii-feature-learning-and-representation-learning" class="level2">
+<h2><span class="secnum">1.3</span> Topic II: Feature Learning and Representation Learning<a class="anchor" href="#topic-ii-feature-learning-and-representation-learning" aria-label="Link to this section">#</a></h2>
+<section id="linear-models" class="level3">
+<h3><span class="secnum">1.3.1</span> Linear Models<a class="anchor" href="#linear-models" aria-label="Link to this section">#</a></h3>
+<p>Before studying neural networks, consider a linear model in a fixed feature space: <span class="math display">\[f_\theta(x)
+    =
+    \theta^T\Phi(x)
+    =
+    \sum_{j=1}^{M}
+    \theta_j\varphi_j(x),\]</span> where <span class="math display">\[\Phi(x)
+    =
+    \begin{pmatrix}
+        \varphi_1(x)\\
+        \vdots\\
+        \varphi_M(x)
+    \end{pmatrix}\]</span> is a feature map.</p>
+<p>The important point is that the features <span class="math display">\[\varphi_j(x)\]</span> are fixed. Learning only determines their coefficients <span class="math inline">\(\theta_j\)</span>.</p>
+<p>Therefore a linear model solves <span class="math display">\[\boxed{
+    \text{fixed representation}
+    +
+    \text{learned linear coefficients}.
+    }\]</span></p>
+</section>
+<section id="neural-networks-learn-the-features" class="level3">
+<h3><span class="secnum">1.3.2</span> Neural Networks Learn the Features<a class="anchor" href="#neural-networks-learn-the-features" aria-label="Link to this section">#</a></h3>
+<p>Consider the final layer of a neural network: <span class="math display">\[f_i(x;\theta)
+    =
+    \sum_{j=1}^{N_L}
+    W_{ij}^{(L+1)}
+    \phi_j(x;\theta),\]</span> where <span class="math display">\[\phi_j(x;\theta)
+    =
+    \phi\!\left(
+        z_j^{(L)}(x;\theta)
+    \right).\]</span></p>
+<p>From the perspective of the final layer, this looks exactly like a linear model: <span class="math display">\[f(x)
+    =
+    W^{(L+1)}
+    \Phi_\theta(x).\]</span></p>
+<p>The crucial difference is <span class="math display">\[\boxed{
+    \Phi_\theta(x)
+    \text{ itself depends on the learned parameters.}
+    }\]</span></p>
+<p>Thus neural-network training does two things simultaneously:</p>
+<ol>
+<li><p>it learns how to combine features;</p></li>
+<li><p>it learns what the features themselves should be.</p></li>
+</ol>
+<p>This is the basic meaning of <em>representation learning</em>.</p>
+</section>
+<section id="the-central-feature-learning-question" class="level3">
+<h3><span class="secnum">1.3.3</span> The Central Feature-Learning Question<a class="anchor" href="#the-central-feature-learning-question" aria-label="Link to this section">#</a></h3>
+<p>The basic theoretical problem is:</p>
+<p><span class="math display">\[\boxed{
+    \text{Data}
+    +
+    \text{Architecture}
+    +
+    \text{Optimization}
+    +
+    \text{Initialization}
+    \rightarrow
+    \text{Learned features}.
+    }\]</span></p>
+<p>More explicitly, we would like to understand <span class="math display">\[\Phi_{\theta_t}(x)\]</span> as a function of training time <span class="math inline">\(t\)</span>.</p>
+<p>Questions include:</p>
+<ol>
+<li><p>Which features emerge first during training?</p></li>
+<li><p>Which properties of the data determine the learned representation?</p></li>
+<li><p>Why are some features reused across many tasks?</p></li>
+<li><p>When are representations sparse or distributed?</p></li>
+<li><p>When does the network discover semantic concepts?</p></li>
+<li><p>How do learned representations change with width and depth?</p></li>
+</ol>
+</section>
+<section id="a-minimal-two-layer-model" class="level3">
+<h3><span class="secnum">1.3.4</span> A Minimal Two-Layer Model<a class="anchor" href="#a-minimal-two-layer-model" aria-label="Link to this section">#</a></h3>
+<p>Consider <span class="math display">\[f(x;t)
+    =
+    \frac{1}{\sqrt m}
+    \sum_{j=1}^{m}
+    a_j(t)
+    \sigma\!\left(
+        w_j(t)^T x
+    \right).\]</span></p>
+<p>There are two qualitatively different kinds of learning.</p>
+<p>If only <span class="math display">\[a_j(t)\]</span> change while <span class="math display">\[w_j(t)\approx w_j(0),\]</span> then the network is approximately learning a linear combination of fixed features <span class="math display">\[\sigma(w_j(0)^T x).\]</span></p>
+<p>By contrast, if <span class="math display">\[w_j(t)\]</span> move substantially, the features themselves change: <span class="math display">\[\sigma(w_j(0)^Tx)
+    \longrightarrow
+    \sigma(w_j(t)^Tx).\]</span></p>
+<p>This is genuine feature learning.</p>
+<p>This also makes the connection with Topic I clear: <span class="math display">\[\boxed{
+    \text{NTK / lazy limit}
+    \approx
+    \text{weak feature learning},
+    }\]</span> whereas other scaling limits can preserve nontrivial feature dynamics.</p>
+<section id="remark-parametrization." class="level5">
+<h5 class="runin">Remark (parametrization).</h5>
+<p>The prefactor <span class="math inline">\(1/\sqrt m\)</span> used here is the NTK scaling, while the mean-field model of Section <a href="#sec:meanfield" data-reference-type="ref" data-reference="sec:meanfield">1.2.4.2</a> uses <span class="math inline">\(1/m\)</span>. With <span class="math inline">\(1/\sqrt m\)</span> and an <span class="math inline">\(O(1)\)</span> learning rate, each <span class="math inline">\(w_j\)</span> moves by only <span class="math inline">\(O(1/\sqrt m)\)</span> during training, so the features freeze as <span class="math inline">\(m\to\infty\)</span>. With <span class="math inline">\(1/m\)</span> and a learning rate scaled up by <span class="math inline">\(m\)</span>, each <span class="math inline">\(w_j\)</span> moves by <span class="math inline">\(O(1)\)</span>. The choice of normalization is therefore what selects lazy versus feature-learning behavior.</p>
+</section>
+</section>
+<section id="what-is-a-semantic-feature" class="level3">
+<h3><span class="secnum">1.3.5</span> What Is a Semantic Feature?<a class="anchor" href="#what-is-a-semantic-feature" aria-label="Link to this section">#</a></h3>
+<p>Suppose a vision model is given an image of the Golden Gate Bridge.</p>
+<p>At the raw-input level, the image consists only of pixel values: <span class="math display">\[x
+    =
+    (x_1,x_2,\ldots,x_N).\]</span></p>
+<p>A low-level feature might detect: <span class="math display">\[\text{edges},\quad
+    \text{colors},\quad
+    \text{textures}.\]</span></p>
+<p>A higher-level representation may encode concepts such as <span class="math display">\[\text{bridge},
+    \qquad
+    \text{suspension bridge},
+    \qquad
+    \text{Golden Gate Bridge},
+    \qquad
+    \text{San Francisco}.\]</span></p>
+<p>These are called <em>semantic features</em> because they correspond to meaningful concepts rather than simple local properties of the input.</p>
+<p>An important question is whether such concepts correspond to individual neurons or to directions in a high-dimensional representation space.</p>
+</section>
+<section id="distributed-representations-and-superposition" class="level3">
+<h3><span class="secnum">1.3.6</span> Distributed Representations and Superposition<a class="anchor" href="#distributed-representations-and-superposition" aria-label="Link to this section">#</a></h3>
+<p>A naive picture is <span class="math display">\[\text{one neuron}
+    \leftrightarrow
+    \text{one concept}.\]</span></p>
+<p>However, modern neural networks often appear to use distributed representations.</p>
+<p>A feature may correspond to a direction <span class="math display">\[v_\alpha
+    \in
+    \mathbb R^d\]</span> in activation space, rather than to a single neuron.</p>
+<p>An activation vector may schematically be written as <span class="math display">\[h(x)
+    \approx
+    \sum_\alpha
+    c_\alpha(x)v_\alpha.\]</span></p>
+<p>If the number of useful features is larger than the activation dimension, the network may store multiple features in non-orthogonal directions: <span class="math display">\[v_\alpha^T v_\beta
+    \neq 0.\]</span></p>
+<p>This phenomenon is often called <em>superposition</em>.</p>
+<p>The rough idea is <span class="math display">\[\boxed{
+    \text{number of useful features}
+    &gt;
+    \text{number of available neurons}
+    }\]</span> so the network compresses many features into a smaller-dimensional space.</p>
+<p>This can lead to <em>polysemantic</em> neurons, where one neuron participates in representing several apparently unrelated concepts.</p>
+</section>
+<section id="feature-geometry" class="level3">
+<h3><span class="secnum">1.3.7</span> Feature Geometry<a class="anchor" href="#feature-geometry" aria-label="Link to this section">#</a></h3>
+<p>Rather than analyzing individual neurons, it is often more useful to study the geometry of representation space.</p>
+<p>Let <span class="math display">\[h_\theta(x)\in\mathbb R^d\]</span> denote the learned representation.</p>
+<p>Then one may study distances <span class="math display">\[d_\theta(x,x&#39;)
+    =
+    \left\|
+        h_\theta(x)-h_\theta(x&#39;)
+    \right\|,\]</span> similarities <span class="math display">\[K_\theta(x,x&#39;)
+    =
+    h_\theta(x)^T h_\theta(x&#39;),\]</span> or covariance matrices <span class="math display">\[C
+    =
+    \mathbb E_x
+    \left[
+        h_\theta(x)h_\theta(x)^T
+    \right].\]</span></p>
+<p>The spectrum of <span class="math inline">\(C\)</span> provides information about the effective dimensionality of the learned representation.</p>
+</section>
+<section id="transformers-and-in-context-learning" class="level3">
+<h3><span class="secnum">1.3.8</span> Transformers and In-Context Learning<a class="anchor" href="#transformers-and-in-context-learning" aria-label="Link to this section">#</a></h3>
+<p>Feature learning becomes particularly interesting in transformers.</p>
+<p>A transformer maps a sequence <span class="math display">\[x_1,\ldots,x_T\]</span> to internal representations <span class="math display">\[h_1^{(\ell)},\ldots,h_T^{(\ell)}.\]</span></p>
+<p>Self-attention performs <span class="math display">\[\begin{aligned}
+    q_i &amp;= W_Q h_i,\\
+    k_j &amp;= W_K h_j,\\
+    v_j &amp;= W_V h_j,\end{aligned}\]</span> followed by <span class="math display">\[\mathrm{Attention}(i)
+    =
+    \sum_j
+    A_{ij}v_j,\]</span> with <span class="math display">\[A_{ij}
+    =
+    \frac{
+        \exp(q_i^Tk_j/\sqrt d)
+    }{
+        \sum_{j&#39;}
+        \exp(q_i^Tk_{j&#39;}/\sqrt d)
+    }.\]</span></p>
+<p>Unlike a fixed feature map, the representation of one token depends on the other tokens in the context.</p>
+<p>This raises the question of <em>in-context learning</em>: how can the forward pass of a trained transformer implement something that resembles a learning algorithm?</p>
+<p>Schematically, <span class="math display">\[\text{context examples}
+    \rightarrow
+    \text{internal representation}
+    \rightarrow
+    \text{new prediction}.\]</span></p>
+<p>One viewpoint is that training does not merely teach the model a fixed input-output function; it can teach the model an <em>algorithm for extracting a task from context</em>.</p>
+</section>
+</section>
+<section id="topic-iii-diffusion-models" class="level2">
+<h2><span class="secnum">1.4</span> Topic III: Diffusion Models<a class="anchor" href="#topic-iii-diffusion-models" aria-label="Link to this section">#</a></h2>
+<section id="generative-modeling" class="level3">
+<h3><span class="secnum">1.4.1</span> Generative Modeling<a class="anchor" href="#generative-modeling" aria-label="Link to this section">#</a></h3>
+<p>Suppose the data are drawn from an unknown high-dimensional distribution <span class="math display">\[x_0\sim \rho_0(x).\]</span></p>
+<p>For example, <span class="math inline">\(x_0\)</span> may be an image.</p>
+<p>The goal of a generative model is not merely to predict a label. Instead, we want to generate a new sample <span class="math display">\[x_{\mathrm{new}}
+    \sim
+    \rho_0.\]</span></p>
+<p>The main difficulty is that <span class="math inline">\(\rho_0(x)\)</span> can be an extremely complicated distribution in a very high-dimensional space.</p>
+</section>
+<section id="forward-diffusion-process" class="level3">
+<h3><span class="secnum">1.4.2</span> Forward Diffusion Process<a class="anchor" href="#forward-diffusion-process" aria-label="Link to this section">#</a></h3>
+<p>Diffusion models introduce a continuous family of distributions <span class="math display">\[\rho_t,
+    \qquad
+    t\in[0,T],\]</span> such that <span class="math display">\[\rho_{t=0}
+    =
+    \rho_{\mathrm{data}},\]</span> while <span class="math display">\[\rho_T
+    \approx
+    \mathcal N(0,I).\]</span></p>
+<p>The forward process gradually adds Gaussian noise.</p>
+<p>A common parametrization is <span class="math display">\[\boxed{
+    x_t
+    =
+    \alpha_t x_0
+    +
+    \sigma_t\epsilon,
+    \qquad
+    \epsilon\sim\mathcal N(0,I).
+    }\]</span></p>
+<p>Initially, <span class="math display">\[\alpha_0\approx1,
+    \qquad
+    \sigma_0\approx0,\]</span> so <span class="math display">\[x_t\approx x_0.\]</span></p>
+<p>At sufficiently large <span class="math inline">\(t\)</span>, <span class="math display">\[\alpha_T\approx0,
+    \qquad
+    \sigma_T\approx1,\]</span> so <span class="math display">\[x_T\approx\epsilon
+    \sim\mathcal N(0,I).\]</span></p>
+<p>Thus, <span class="math display">\[\boxed{
+    \text{complicated data distribution}
+    \rightarrow
+    \text{simple Gaussian distribution}.
+    }\]</span></p>
+</section>
+<section id="the-score-function" class="level3">
+<h3><span class="secnum">1.4.3</span> The Score Function<a class="anchor" href="#the-score-function" aria-label="Link to this section">#</a></h3>
+<p>Define the score of the intermediate distribution <span class="math inline">\(\rho_t\)</span> by <span class="math display">\[\boxed{
+    s_t(x)
+    =
+    \nabla_x
+    \log \rho_t(x).
+    }\]</span></p>
+<p>The score is a vector field in data space.</p>
+<p>Intuitively, <span class="math inline">\(s_t(x)\)</span> points toward directions in which the probability density increases most rapidly.</p>
+<p>For a one-dimensional Gaussian, <span class="math display">\[\rho(x)
+    \propto
+    e^{-x^2/(2\sigma^2)},\]</span> we have <span class="math display">\[s(x)
+    =
+    \frac{d}{dx}\log\rho(x)
+    =
+    -\frac{x}{\sigma^2}.\]</span></p>
+<p>Therefore the score points back toward the high-probability region near <span class="math inline">\(x=0\)</span>.</p>
+</section>
+<section id="why-is-the-score-enough" class="level3">
+<h3><span class="secnum">1.4.4</span> Why Is the Score Enough?<a class="anchor" href="#why-is-the-score-enough" aria-label="Link to this section">#</a></h3>
+<p>Suppose the forward diffusion is described by the stochastic differential equation <span class="math display">\[dx
+    =
+    f(x,t)\,dt
+    +
+    g(t)\,dW_t.\]</span></p>
+<p>The evolution of the probability density is described by a Fokker–Planck equation.</p>
+<p>Remarkably, the corresponding reverse-time stochastic dynamics can be written in terms of the score: <span class="math display">\[dx
+    =
+    \left[
+        f(x,t)
+        -
+        g(t)^2
+        \nabla_x\log\rho_t(x)
+    \right]dt
+    +
+    g(t)d\overline W_t,\]</span> where the equation is integrated from <span class="math inline">\(t=T\)</span> back toward <span class="math inline">\(t=0\)</span>.</p>
+<p>Therefore, if we know <span class="math display">\[s_t(x)
+    =
+    \nabla_x\log\rho_t(x)\]</span> for every <span class="math inline">\(t\)</span>, we can reverse the noising process.</p>
+<p>The central idea is consequently <span class="math display">\[\boxed{
+    \text{learn the score}
+    \quad\Longrightarrow\quad
+    \text{reverse diffusion}
+    \quad\Longrightarrow\quad
+    \text{generate data}.
+    }\]</span></p>
+</section>
+<section id="learning-the-score" class="level3">
+<h3><span class="secnum">1.4.5</span> Learning the Score<a class="anchor" href="#learning-the-score" aria-label="Link to this section">#</a></h3>
+<p>Introduce a neural network <span class="math display">\[s_\theta(x,t)\]</span> that approximates <span class="math display">\[\nabla_x\log\rho_t(x).\]</span></p>
+<p>For the Gaussian corruption <span class="math display">\[x_t
+    =
+    \alpha_t x_0
+    +
+    \sigma_t\epsilon,\]</span> the conditional distribution is <span class="math display">\[p(x_t\mid x_0)
+    =
+    \mathcal N(
+        \alpha_t x_0,
+        \sigma_t^2 I
+    ).\]</span></p>
+<p>Its score is known exactly: <span class="math display">\[\nabla_{x_t}
+    \log p(x_t\mid x_0)
+    =
+    -
+    \frac{
+        x_t-\alpha_t x_0
+    }{
+        \sigma_t^2
+    }.\]</span></p>
+<p>Since <span class="math display">\[x_t-\alpha_t x_0
+    =
+    \sigma_t\epsilon,\]</span> this becomes <span class="math display">\[\nabla_{x_t}
+    \log p(x_t\mid x_0)
+    =
+    -
+    \frac{\epsilon}{\sigma_t}.\]</span></p>
+<p>Therefore one can train the network using denoising score matching: <span class="math display">\[\mathcal L_{\mathrm{score}}(\theta)
+    =
+    \mathbb E_{
+        t,x_0,\epsilon
+    }
+    \left[
+        \lambda(t)
+        \left\|
+        s_\theta(x_t,t)
+        +
+        \frac{\epsilon}{\sigma_t}
+        \right\|^2
+    \right].\]</span></p>
+<p>Thus the training problem can be reduced to a supervised regression problem with artificially generated Gaussian noise.</p>
+</section>
+<section id="equivalent-noise-prediction-formulation" class="level3">
+<h3><span class="secnum">1.4.6</span> Equivalent Noise-Prediction Formulation<a class="anchor" href="#equivalent-noise-prediction-formulation" aria-label="Link to this section">#</a></h3>
+<p>Instead of directly predicting the score, many diffusion models predict the noise <span class="math display">\[\epsilon_\theta(x_t,t).\]</span></p>
+<p>Since <span class="math display">\[s_t(x_t)
+    \sim
+    -
+    \frac{\epsilon}{\sigma_t},\]</span> the two representations are directly related: <span class="math display">\[s_\theta(x_t,t)
+    =
+    -
+    \frac{
+        \epsilon_\theta(x_t,t)
+    }{
+        \sigma_t
+    }.\]</span></p>
+<p>The corresponding loss is approximately <span class="math display">\[\mathcal L_\epsilon
+    =
+    \mathbb E
+    \left[
+        \left\|
+        \epsilon
+        -
+        \epsilon_\theta(x_t,t)
+        \right\|^2
+    \right].\]</span></p>
+</section>
+<section id="probability-flow-ode" class="level3">
+<h3><span class="secnum">1.4.7</span> Probability-Flow ODE<a class="anchor" href="#probability-flow-ode" aria-label="Link to this section">#</a></h3>
+<p>The stochastic reverse dynamics are not the only way to generate samples.</p>
+<p>The same family of marginal distributions <span class="math inline">\(\rho_t\)</span> can also be reproduced by a deterministic probability-flow ODE, <span class="math display">\[\frac{dx}{dt}
+    =
+    f(x,t)
+    -
+    \frac{1}{2}
+    g(t)^2
+    s_t(x).\]</span></p>
+<p>Thus diffusion models can be understood either as <span class="math display">\[\text{stochastic reverse dynamics}\]</span> or as <span class="math display">\[\text{deterministic transport through probability space}.\]</span></p>
+<p>This also provides a connection to flow-based generative models and flow matching.</p>
+</section>
+<section id="geometrical-picture" class="level3">
+<h3><span class="secnum">1.4.8</span> Geometrical Picture<a class="anchor" href="#geometrical-picture" aria-label="Link to this section">#</a></h3>
+<p>At large noise, <span class="math display">\[\rho_T(x)
+    \approx
+    \mathcal N(0,I),\]</span> which is simple.</p>
+<p>As <span class="math inline">\(t\)</span> decreases, the score field gradually guides samples toward the high-probability regions of the data distribution.</p>
+<p>Schematically, <span class="math display">\[\text{Gaussian noise}
+    \rightarrow
+    \text{coarse structure}
+    \rightarrow
+    \text{objects}
+    \rightarrow
+    \text{fine details}.\]</span></p>
+<p>In this sense, the neural network learns a time-dependent vector field <span class="math display">\[s_\theta(x,t)\]</span> that describes the geometry of the probability distribution at different noise scales.</p>
+
+<figure class="widget" id="fig-diffusion" data-widget="diffusion">
+  <header class="widget-head">
+    <p class="kicker">Interactive figure</p>
+    <h4 class="widget-title">Noising and denoising a one-dimensional distribution</h4>
+  </header>
+  <div class="controls">
+      <div class="control">
+        <label for="diff-t">noise time \(t\)</label>
+        <output id="diff-t-out" for="diff-t">0.10</output>
+        <input type="range" id="diff-t" min="0" max="1" step="0.005" value="0.2">
+      </div>
+    <div class="buttons">
+      <button type="button" class="btn primary" id="diff-run">Generate from noise</button>
+      <button type="button" class="btn" id="diff-reset">Resample data</button>
+    </div>
+  </div>
+  <div class="panels stack">
+    <canvas class="plot tall" id="diff-density" role="img" aria-label="Histogram of samples and the density rho_t"></canvas>
+    <canvas class="plot short" id="diff-score" role="img" aria-label="Score function s_t(x)"></canvas>
+  </div>
+  <p class="readout" id="diff-readout" aria-live="polite"></p>
+  <figcaption>
+    Data distribution \(\rho_0\): a three-component Gaussian mixture. Forward
+    process: Ornstein&ndash;Uhlenbeck, \(dx=-x\,dt+\sqrt2\,dW_t\), so
+    \(\alpha_t=e^{-t}\) and \(\sigma_t^2=1-e^{-2t}\). Dragging \(t\) noises
+    the same 5,000 samples through \(x_t=\alpha_t x_0+\sigma_t\epsilon\).
+    <em>Generate from noise</em> draws fresh samples from \(\mathcal N(0,1)\) and
+    integrates the probability-flow ODE \(dx/dt=-x-s_t(x)\) backwards from
+    \(t=2.5\) with the exact score. At every \(t\) the histogram follows
+    \(\rho_t\) (curve), and at \(t=0\) it recovers the data distribution.
+  </figcaption>
+</figure>
+</section>
+<section id="main-questions-for-diffusion-models" class="level3">
+<h3><span class="secnum">1.4.9</span> Main Questions for Diffusion Models<a class="anchor" href="#main-questions-for-diffusion-models" aria-label="Link to this section">#</a></h3>
+<p>Important theoretical questions include:</p>
+<ol>
+<li><p>Why is the score easier to learn than the probability density itself?</p></li>
+<li><p>Why does adding noise make the learning problem easier?</p></li>
+<li><p>How accurately must the score be learned in order to generate accurate samples?</p></li>
+<li><p>How does error accumulate during the reverse process?</p></li>
+<li><p>Why do diffusion models scale so effectively with model size and data?</p></li>
+<li><p>What representations are learned by the denoising network?</p></li>
+<li><p>What is the relation between diffusion models, optimal transport, normalizing flows, and flow matching?</p></li>
+<li><p>How many reverse-time steps are fundamentally necessary?</p></li>
+<li><p>Which aspects of the data distribution are learned at large noise and which are learned only at small noise?</p></li>
+</ol>
+</section>
+</section>
+<section id="relations-between-the-three-topics" class="level2">
+<h2><span class="secnum">1.5</span> Relations Between the Three Topics<a class="anchor" href="#relations-between-the-three-topics" aria-label="Link to this section">#</a></h2>
+<p>Although scaling laws, feature learning, and diffusion models initially look like separate topics, they are closely connected.</p>
+<section id="scaling-and-feature-learning" class="level3">
+<h3><span class="secnum">1.5.1</span> Scaling and Feature Learning<a class="anchor" href="#scaling-and-feature-learning" aria-label="Link to this section">#</a></h3>
+<p>The infinite-width limit used in NTK theory can suppress feature learning: <span class="math display">\[\text{width}\rightarrow\infty
+    \quad\Rightarrow\quad
+    \text{features approximately frozen}.\]</span></p>
+<p>Therefore an important question is which scaling limit retains the rich feature learning observed in practical neural networks.</p>
+<p>This illustrates why different limits need not commute.</p>
+</section>
+<section id="feature-learning-and-diffusion" class="level3">
+<h3><span class="secnum">1.5.2</span> Feature Learning and Diffusion<a class="anchor" href="#feature-learning-and-diffusion" aria-label="Link to this section">#</a></h3>
+<p>A diffusion model is trained to estimate <span class="math display">\[s_t(x)
+    =
+    \nabla_x\log\rho_t(x)\]</span> at many noise levels.</p>
+<p>To do this, the network must learn useful internal representations of the data.</p>
+<p>At large <span class="math inline">\(t\)</span>, these representations may encode coarse global structure, whereas at small <span class="math inline">\(t\)</span> they must encode increasingly fine details.</p>
+<p>Thus diffusion models provide a natural laboratory for studying how representations depend on scale.</p>
+</section>
+<section id="scaling-and-generative-modeling" class="level3">
+<h3><span class="secnum">1.5.3</span> Scaling and Generative Modeling<a class="anchor" href="#scaling-and-generative-modeling" aria-label="Link to this section">#</a></h3>
+<p>A generative model must represent an entire probability distribution rather than merely a decision boundary.</p>
+<p>This raises particularly sharp scaling questions: <span class="math display">\[\text{How much model capacity and data are required to represent}
+    \quad
+    \rho_{\mathrm{data}}?\]</span></p>
+<p>One may therefore study scaling laws such as <span class="math display">\[\mathcal L_{\mathrm{gen}}
+    =
+    \mathcal L(N,n,C),\]</span> and ask whether the same scaling ideas observed in supervised learning also govern modern generative models.</p>
+</section>
+</section>
+<section id="big-picture" class="level2">
+<h2><span class="secnum">1.6</span> Big Picture<a class="anchor" href="#big-picture" aria-label="Link to this section">#</a></h2>
+<p>The three topics can be summarized as follows.</p>
+<div class="center">
+<div class="table-wrap"><table>
+<thead>
+<tr class="header">
+<th style="text-align: center;"><strong>Topic</strong></th>
+<th style="text-align: center;"><strong>Central Question</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: center;">Scaling</td>
+<td style="text-align: center;">What simple theory emerges when neural networks become very large?</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">Feature learning</td>
+<td style="text-align: center;">What internal representation does training discover?</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">Diffusion</td>
+<td style="text-align: center;">How can a neural network learn and sample from an entire distribution?</td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<p>A common theme is the search for an effective theory of learning: <span class="math display">\[\boxed{
+    \text{microscopic parameter dynamics}
+    \quad\longrightarrow\quad
+    \text{macroscopic laws of learning}.
+    }\]</span></p>
+<p>From a statistical-physics perspective, neural networks are particularly interesting because they are large interacting dynamical systems whose effective degrees of freedom, representations, and scaling laws are themselves learned from data.</p>
+</section>
+<section class="footnotes" role="doc-endnotes">
+<h2 class="notes-title">Notes</h2>
+<ol>
+<li id="fn1" role="doc-endnote"><p>With this convention <span class="math inline">\(\phi\)</span> also acts on the raw input <span class="math inline">\(z^{(0)}=x\)</span>. Lecture 2 uses the equally common convention <span class="math inline">\(z^{(1)}=W^{(1)}x+b^{(1)}\)</span>; nothing below depends on the choice.<a href="#fnref1" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+</ol>
+</section>
+
+    </div>
+    <nav class="pager" aria-label="Lectures"><a class="pager-next" href="lecture2.html"><span>Next</span>Lecture 2: Scaling Limits of Neural Networks</a></nav>
+    <footer class="page-foot">
+      Generated from <a href="https://github.com/LianghongMo/LLM-note/blob/main/notes/lecture1.tex">notes/lecture1.tex</a>
+      &middot; <a href="notes/LLM-note.pdf">PDF version</a>
+    </footer>
+  </main>
+</div>
+<script defer src="assets/figures.js"></script>
+</body>
+</html>

@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>LLM-note</title>
+<meta name="description" content="Lecture notes on the theory of neural networks: scaling limits, feature learning, and diffusion models.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap">
+<link rel="stylesheet" href="assets/site.css">
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(', '\\)']], displayMath: [['\\[', '\\]']] },
+  svg: { fontCache: 'global' },
+  options: { skipHtmlTags: ['script', 'style', 'textarea', 'code', 'canvas'] }
+};
+</script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-svg.min.js"></script>
+<script defer src="assets/site.js"></script>
+</head>
+<body>
+<header class="topbar">
+  <a class="wordmark" href="index.html">LLM-note</a>
+  <nav aria-label="Site">
+    <a href="lecture1.html">Lecture 1</a>
+    <a href="lecture2.html">Lecture 2</a>
+    <a href="notes/LLM-note.pdf">PDF</a>
+    <a href="https://github.com/LianghongMo/LLM-note">Source</a>
+  </nav>
+</header>
+<main class="home">
+  <section class="hero">
+    <h1>LLM-note</h1>
+    <p class="lede">Lecture notes on the theory of neural networks: scaling limits,
+    feature learning, and diffusion models, read through the lens of statistical
+    physics. Large networks are treated the way a physicist treats a many-body
+    system: look for the few macroscopic variables and dimensionless ratios that
+    survive the limit.</p>
+    <p class="meta">2 lectures &middot; 4 interactive figures &middot;
+      <a href="notes/LLM-note.pdf">PDF</a> &middot; <a href="https://github.com/LianghongMo/LLM-note">LaTeX source</a></p>
+  </section>
+
+  <section class="lectures" aria-label="Lectures">
+    <article class="lecture-card">
+      <p class="kicker">Lecture 1</p>
+      <h3><a href="lecture1.html">Three Questions in Deep-Learning Theory</a></h3>
+      <p>Neural networks as parametrized families of functions, and the three questions the notes are built around: what simple theory emerges at large scale, what features training discovers, and how a diffusion model learns and samples an entire distribution.</p>
+      <p class="card-formula">\[\text{Architecture}+\text{Data}+\text{Optimization}\;\Longrightarrow\;f_{\theta}\]</p>
+      <ol class="card-sections"><li><span class="secnum">1.1</span> Introduction</li><li><span class="secnum">1.2</span> Topic I: Scaling Laws and Large-Network Limits</li><li><span class="secnum">1.3</span> Topic II: Feature Learning and Representation Learning</li><li><span class="secnum">1.4</span> Topic III: Diffusion Models</li><li><span class="secnum">1.5</span> Relations Between the Three Topics</li><li><span class="secnum">1.6</span> Big Picture</li></ol>
+      <a class="btn primary" href="lecture1.html">Read lecture 1</a>
+    </article>
+    <article class="lecture-card">
+      <p class="kicker">Lecture 2</p>
+      <h3><a href="lecture2.html">Scaling Limits of Neural Networks</a></h3>
+      <p>Three worked scaling limits, each controlled by a single dimensionless ratio: depth over width in deep linear networks, the residual scale in deep ResNets, and parameters over data in ridge regression.</p>
+      <p class="card-formula">\[\xi=L/N,\qquad s_L\sim L^{-1/2},\qquad \gamma=d/n\]</p>
+      <ol class="card-sections"><li><span class="secnum">2.1</span> Basic setup</li><li><span class="secnum">2.2</span> The scaling question</li><li><span class="secnum">2.3</span> Depth versus width: deep linear networks</li><li><span class="secnum">2.4</span> Large-depth limits of ResNets</li><li><span class="secnum">2.5</span> Number of parameters versus number of data points</li><li><span class="secnum">2.6</span> Summary: the recurring idea</li></ol>
+      <a class="btn primary" href="lecture2.html">Read lecture 2</a>
+    </article>
+  </section>
+
+  <section class="ratios">
+    <h2>The recurring idea</h2>
+    <p>Each example in Lecture 2 is controlled by one ratio of large numbers, not by
+    the sizes separately. Fix the ratio, send the sizes to infinity, and a
+    simple limiting law appears.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>System</th><th>Ratio held fixed</th><th>Limiting law</th></tr></thead>
+        <tbody>
+          <tr><td>Deep linear network</td><td>\(\xi=L/N\)</td><td>\(\log(\|z^{(L)}\|/\|x\|)\to\mathcal N(-\xi/2,\,\xi/2)\)</td></tr>
+          <tr><td>ResNet, iid layers</td><td>\(L\,s_L^2\)</td><td>Neural SDE \(dz_t=G(z_t)\,dB_t\) at \(s_L\sim L^{-1/2}\)</td></tr>
+          <tr><td>Ridge regression</td><td>\(\gamma=d/n\)</td><td>Marchenko&ndash;Pastur law, \(\lambda_*=\gamma/\mathrm{SNR}\)</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer class="page-foot">
+    Generated from the LaTeX sources in <a href="https://github.com/LianghongMo/LLM-note/tree/main/notes">notes/</a>
+    with <code>python tools/build_site.py</code>.
+  </footer>
+</main>
+</body>
+</html>
