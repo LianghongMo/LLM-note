@@ -1,0 +1,579 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lecture 3: Infinite-Width Training Dynamics · LLM-note</title>
+<meta name="description" content="How the initialization and learning rate must scale with width for training to have an infinite-width limit. The NTK parametrization freezes the features and reduces training to kernel regression; the mean-field parametrization lets every neuron move, and gradient descent becomes a Wasserstein gradient flow of the neuron distribution.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap">
+<link rel="stylesheet" href="assets/site.css">
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(', '\\)']], displayMath: [['\\[', '\\]']] },
+  svg: { fontCache: 'global' },
+  options: { skipHtmlTags: ['script', 'style', 'textarea', 'code', 'canvas'] }
+};
+</script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-svg.min.js"></script>
+<script defer src="assets/site.js"></script>
+</head>
+<body>
+<header class="topbar">
+  <a class="wordmark" href="index.html">LLM-note</a>
+  <nav aria-label="Site">
+    <a href="lecture1.html">Lecture 1</a><a href="lecture2.html">Lecture 2</a><a href="lecture3.html" aria-current="page">Lecture 3</a>
+    <a href="notes/LLM-note.pdf">PDF</a>
+    <a href="https://github.com/LianghongMo/LLM-note">Source</a>
+  </nav>
+</header>
+<div class="layout">
+  <aside class="toc-rail" aria-label="Contents">
+    <p class="kicker">Lecture 3 contents</p>
+    <nav class="toc"><ol><li><a href="#setup"><span class="secnum">3.1</span> Setup</a>
+</li>
+<li><a href="#main-question"><span class="secnum">3.2</span> Main Question</a>
+</li>
+<li><a href="#ntk-regime"><span class="secnum">3.3</span> NTK Regime</a>
+</li>
+<li><a href="#derivation-of-ntk-dynamics"><span class="secnum">3.4</span> Derivation of NTK Dynamics</a>
+</li>
+<li><a href="#why-does-the-ntk-freeze"><span class="secnum">3.5</span> Why Does the NTK Freeze?</a>
+</li>
+<li><a href="#mean-field-regime"><span class="secnum">3.6</span> Mean-Field Regime</a>
+</li>
+<li><a href="#dynamics-of-an-individual-neuron"><span class="secnum">3.7</span> Dynamics of an Individual Neuron</a>
+</li>
+<li><a href="#evolution-of-the-neuron-distribution"><span class="secnum">3.8</span> Evolution of the Neuron Distribution</a>
+</li>
+<li><a href="#ntk-vs.-mean-field"><span class="secnum">3.9</span> NTK vs. Mean Field</a>
+</li></ol></nav>
+  </aside>
+  <main class="article" id="top">
+    <header class="lecture-head">
+      <p class="kicker">Lecture 3</p>
+      <h1>Infinite-Width Training Dynamics</h1>
+      <p class="lede">How the initialization and learning rate must scale with width for training to have an infinite-width limit. The NTK parametrization freezes the features and reduces training to kernel regression; the mean-field parametrization lets every neuron move, and gradient descent becomes a Wasserstein gradient flow of the neuron distribution.</p>
+      <p class="head-formula">\(\partial_t\mu_t=\eta\,\nabla_\vartheta\cdot\Big(\mu_t\,\nabla_\vartheta\frac{\delta\mathcal L}{\delta\mu_t}\Big)\)</p>
+    </header>
+    <aside class="keyideas" aria-label="Key ideas">
+      <p class="kicker">Key ideas</p>
+      
+<ul>
+<li><p>The question is how the initialization and learning rate must scale with the width <span class="math inline">\(N\)</span> for the limit <span class="math inline">\(N\to\infty\)</span> to exist and stay nontrivial. One family covers both answers: <span class="math inline">\(f_\theta=\frac{1}{\gamma\sqrt N}\sum_i W^{(2)}_i\phi(W^{(1)}_i\cdot x/\sqrt D)\)</span> trained with learning rate <span class="math inline">\(\eta\gamma^2\)</span>.</p></li>
+<li><p><strong>NTK</strong> (<span class="math inline">\(\gamma=1\)</span>): each neuron moves only <span class="math inline">\(O(N^{-1/2})\)</span>, the kernel <span class="math inline">\(K_\theta\)</span> freezes, and training is kernel regression, <span class="math inline">\(\mathbf r(t)=e^{-\eta K_\infty t/n}\,\mathbf r(0)\)</span>.</p></li>
+<li><p><strong>Mean field</strong> (<span class="math inline">\(\gamma=\sqrt N\)</span>): each neuron moves <span class="math inline">\(O(1)\)</span> and feels the others only through their empirical distribution <span class="math inline">\(\mu_t\)</span>, which follows the Wasserstein gradient flow <span class="math inline">\(\partial_t\mu_t=\eta\nabla\cdot(\mu_t\nabla\,\delta\mathcal L/\delta\mu_t)\)</span>.</p></li>
+<li><p>Lazy training versus feature learning is decided by the parametrization, not by the width alone.</p></li>
+</ul>
+
+    </aside>
+    <details class="toc-inline">
+      <summary>Contents</summary>
+      <nav class="toc"><ol><li><a href="#setup"><span class="secnum">3.1</span> Setup</a>
+</li>
+<li><a href="#main-question"><span class="secnum">3.2</span> Main Question</a>
+</li>
+<li><a href="#ntk-regime"><span class="secnum">3.3</span> NTK Regime</a>
+</li>
+<li><a href="#derivation-of-ntk-dynamics"><span class="secnum">3.4</span> Derivation of NTK Dynamics</a>
+</li>
+<li><a href="#why-does-the-ntk-freeze"><span class="secnum">3.5</span> Why Does the NTK Freeze?</a>
+</li>
+<li><a href="#mean-field-regime"><span class="secnum">3.6</span> Mean-Field Regime</a>
+</li>
+<li><a href="#dynamics-of-an-individual-neuron"><span class="secnum">3.7</span> Dynamics of an Individual Neuron</a>
+</li>
+<li><a href="#evolution-of-the-neuron-distribution"><span class="secnum">3.8</span> Evolution of the Neuron Distribution</a>
+</li>
+<li><a href="#ntk-vs.-mean-field"><span class="secnum">3.9</span> NTK vs. Mean Field</a>
+</li></ol></nav>
+    </details>
+    <div class="prose">
+<section id="setup" class="level2">
+<h2><span class="secnum">3.1</span> Setup<a class="anchor" href="#setup" aria-label="Link to this section">#</a></h2>
+<p>Consider a two-layer neural network <span class="math display">\[f_\theta(x)
+    =
+    s_2
+    \sum_{i=1}^{N}
+    W_i^{(2)}
+    \phi\!\left(
+        s_1 W_i^{(1)}\cdot x
+    \right),\]</span> where <span class="math inline">\(x\in\mathbb{R}^D\)</span> is the input, <span class="math inline">\(N\)</span> is the width, and <span class="math display">\[\theta_i
+=
+\left(
+W_i^{(1)},W_i^{(2)}
+\right)\]</span> denotes the parameters associated with neuron <span class="math inline">\(i\)</span>.</p>
+<p>The network can be viewed as a bipartite computational graph: the input is connected to <span class="math inline">\(N\)</span> hidden neurons through <span class="math inline">\(W_i^{(1)}\)</span>, and the hidden neurons are connected to the output through <span class="math inline">\(W_i^{(2)}\)</span>.</p>
+<p>We train the network by gradient descent, <span class="math display">\[\theta_{t+1}
+    =
+    \theta_t
+    -
+    \eta \nabla_\theta \mathcal{L}(\theta_t),\]</span> with, for example, the squared loss <span class="math display">\[\mathcal{L}(\theta)
+    =
+    \frac{1}{2n}
+    \sum_{\alpha=1}^{n}
+    \left(
+        f_\theta(x_\alpha)-y_\alpha
+    \right)^2.\]</span></p>
+<p>Throughout this discussion, we first keep the number of data points <span class="math inline">\(n\)</span> and the training time fixed, and study the limit <span class="math display">\[N\rightarrow\infty.\]</span></p>
+<p>A more difficult problem is to study joint limits in which the number of data points or the training time also grows with <span class="math inline">\(N\)</span>.</p>
+</section>
+<section id="main-question" class="level2">
+<h2><span class="secnum">3.2</span> Main Question<a class="anchor" href="#main-question" aria-label="Link to this section">#</a></h2>
+<p>The main question is:</p>
+<blockquote>
+<p>How should the initialization and learning rate scale with the width <span class="math inline">\(N\)</span> so that the limit <span class="math inline">\(N\rightarrow\infty\)</span> exists and remains nontrivial?</p>
+</blockquote>
+<p>We take <span class="math display">\[W_{ij}^{(\ell)}
+    \sim
+    \mathcal{N}(0,1),\]</span> and introduce the unified parameterization <span class="math display">\[\boxed{
+    f_\theta(x)
+    =
+    \frac{1}{\gamma\sqrt{N}}
+    \sum_{i=1}^{N}
+    W_i^{(2)}
+    \phi\!\left(
+        \frac{1}{\sqrt{D}}
+        W_i^{(1)}\cdot x
+    \right)
+    }\]</span> together with the learning-rate scaling <span class="math display">\[\boxed{
+    \theta_{t+1}
+    =
+    \theta_t
+    -
+    \eta\gamma^2
+    \nabla_\theta \mathcal{L}(\theta_t).
+    }\]</span></p>
+<p>Two important regimes are <span class="math display">\[\begin{aligned}
+    \gamma &amp;= 1
+    &amp;&amp;\text{NTK / lazy-training regime},\\
+    \gamma &amp;= \sqrt{N}
+    &amp;&amp;\text{mean-field regime}.\end{aligned}\]</span></p>
+<p>These two choices lead to qualitatively different infinite-width training dynamics.</p>
+</section>
+<section id="ntk-regime" class="level2">
+<h2><span class="secnum">3.3</span> NTK Regime<a class="anchor" href="#ntk-regime" aria-label="Link to this section">#</a></h2>
+<p>Take <span class="math display">\[\gamma=1.\]</span> Then <span class="math display">\[f_\theta(x)
+    =
+    \frac{1}{\sqrt{N}}
+    \sum_{i=1}^{N}
+    W_i^{(2)}
+    \phi\!\left(
+        \frac{1}{\sqrt{D}}
+        W_i^{(1)}\cdot x
+    \right).\]</span></p>
+<p>The important phenomenon is that, for large <span class="math inline">\(N\)</span>, the parameters move only a small distance from their initialization. Therefore the network can be approximated by its first-order Taylor expansion around <span class="math inline">\(\theta_0\)</span>: <span class="math display">\[\boxed{
+    f_\theta^{\mathrm{lin}}(x)
+    =
+    f_{\theta_0}(x)
+    +
+    \left\langle
+        \theta-\theta_0,
+        \nabla_\theta f_{\theta_0}(x)
+    \right\rangle.
+    }\]</span></p>
+<p>Schematically, under suitable regularity assumptions and for finite training time, <span class="math display">\[\begin{aligned}
+    \sup_{t\leq T}
+    \left\|
+        f_{\theta_t}
+        -
+        f_{\theta_t}^{\mathrm{lin}}
+    \right\|
+    &amp;\longrightarrow 0,
+    \\
+    \sup_{t\leq T}
+    \left\|
+        K_{\theta_t}
+        -
+        K_{\theta_0}
+    \right\|
+    &amp;\longrightarrow 0\end{aligned}\]</span> as <span class="math inline">\(N\rightarrow\infty\)</span>.</p>
+<p>Thus, in the NTK limit, training of the neural network becomes equivalent to training a linear model with the fixed feature map <span class="math display">\[x
+\mapsto
+\nabla_\theta f_{\theta_0}(x).\]</span></p>
+<p>In this sense,</p>
+<blockquote>
+<p>At infinite width, the nonlinear neural network has linearized training dynamics around its initialization.</p>
+</blockquote>
+</section>
+<section id="derivation-of-ntk-dynamics" class="level2">
+<h2><span class="secnum">3.4</span> Derivation of NTK Dynamics<a class="anchor" href="#derivation-of-ntk-dynamics" aria-label="Link to this section">#</a></h2>
+<p>It is convenient to consider continuous-time gradient flow, <span class="math display">\[\frac{d\theta_t}{dt}
+    =
+    -\eta
+    \nabla_\theta
+    \mathcal{L}(\theta_t).\]</span></p>
+<p>Then <span class="math display">\[\begin{aligned}
+    \frac{d}{dt}
+    f_{\theta_t}(x)
+    &amp;=
+    \nabla_\theta f_{\theta_t}(x)
+    \cdot
+    \frac{d\theta_t}{dt}
+    \\
+    &amp;=
+    -\eta
+    \nabla_\theta f_{\theta_t}(x)
+    \cdot
+    \nabla_\theta
+    \mathcal{L}(\theta_t).\end{aligned}\]</span></p>
+<p>For the squared loss, <span class="math display">\[\nabla_\theta\mathcal{L}
+    =
+    \frac{1}{n}
+    \sum_{\alpha=1}^{n}
+    \left(
+        f_{\theta}(x_\alpha)-y_\alpha
+    \right)
+    \nabla_\theta f_\theta(x_\alpha).\]</span></p>
+<p>Therefore, <span class="math display">\[\boxed{
+    \frac{d}{dt}
+    f_{\theta_t}(x)
+    =
+    -
+    \frac{\eta}{n}
+    \sum_{\alpha=1}^{n}
+    \left(
+        f_{\theta_t}(x_\alpha)-y_\alpha
+    \right)
+    K_{\theta_t}(x,x_\alpha),
+    }\]</span> where <span class="math display">\[\boxed{
+    K_\theta(x,x&#39;)
+    =
+    \left\langle
+        \nabla_\theta f_\theta(x),
+        \nabla_\theta f_\theta(x&#39;)
+    \right\rangle
+    }\]</span> is the <strong>Neural Tangent Kernel (NTK)</strong>.</p>
+<p>For the training data, define <span class="math display">\[f_\alpha(t)=f_{\theta_t}(x_\alpha),
+\qquad
+r_\alpha(t)=f_\alpha(t)-y_\alpha.\]</span> Then <span class="math display">\[\boxed{
+    \dot{\mathbf r}(t)
+    =
+    -
+    \frac{\eta}{n}
+    K_{\theta_t}
+    \mathbf r(t).
+    }\]</span></p>
+<p>If the kernel becomes constant, <span class="math display">\[K_{\theta_t}
+\approx
+K_{\theta_0}
+\rightarrow
+K_\infty,\]</span> then <span class="math display">\[\boxed{
+    \mathbf r(t)
+    =
+    \exp\!\left(
+        -\frac{\eta}{n}K_\infty t
+    \right)
+    \mathbf r(0).
+    }\]</span></p>
+<p>Thus the entire training dynamics is determined by a fixed kernel.</p>
+</section>
+<section id="why-does-the-ntk-freeze" class="level2">
+<h2><span class="secnum">3.5</span> Why Does the NTK Freeze?<a class="anchor" href="#why-does-the-ntk-freeze" aria-label="Link to this section">#</a></h2>
+<p>Because the network is a sum over neurons, <span class="math display">\[K_\theta(x,x&#39;)
+    =
+    \frac{1}{N}
+    \sum_{i=1}^{N}
+    K_{\theta_i}(x,x&#39;),\]</span> so <span class="math inline">\(K_\theta=O(1)\)</span>.</p>
+<p>For a two-layer network, the Hessian with respect to neuron parameters has a block-diagonal structure, <span class="math display">\[\operatorname{Hess}_\theta f
+    =
+    \operatorname{diag}
+    \left[
+        \operatorname{Hess}_{\theta_1}f,
+        \ldots,
+        \operatorname{Hess}_{\theta_N}f
+    \right].\]</span></p>
+<p>In NTK parameterization, each neuron contributes only <span class="math inline">\(O(N^{-1/2})\)</span> to the network output. Correspondingly, each individual neuron moves only <span class="math display">\[\Delta\theta_i
+=
+O(N^{-1/2})\]</span> over an <span class="math inline">\(O(1)\)</span> training time.</p>
+<p>Hence <span class="math display">\[\theta_i(t)
+\approx
+\theta_i(0),\]</span> and the features generated by each neuron barely change.</p>
+<p>Therefore <span class="math display">\[\boxed{
+    \frac{d}{dt}K_{\theta_t}
+    \longrightarrow 0
+    \qquad
+    \text{as }
+    N\rightarrow\infty.
+    }\]</span></p>
+<p>The nonlinear terms in the Taylor expansion vanish, leaving only the linearized dynamics.</p>
+<p><span class="math display">\[\boxed{
+\text{NTK limit}
+\quad\Longrightarrow\quad
+\text{kernel learning with nearly frozen features}.
+}\]</span></p>
+</section>
+<section id="mean-field-regime" class="level2">
+<h2><span class="secnum">3.6</span> Mean-Field Regime<a class="anchor" href="#mean-field-regime" aria-label="Link to this section">#</a></h2>
+<p>Now take <span class="math display">\[\gamma=\sqrt{N}.\]</span> Then <span class="math display">\[\boxed{
+    f_\theta(x)
+    =
+    \frac{1}{N}
+    \sum_{i=1}^{N}
+    W_i^{(2)}
+    \phi\!\left(
+        \frac{1}{\sqrt{D}}
+        W_i^{(1)}\cdot x
+    \right).
+    }\]</span></p>
+<p>The learning-rate scaling becomes <span class="math display">\[\boxed{
+    \theta_{t+1}
+    =
+    \theta_t
+    -
+    \eta N
+    \nabla_\theta
+    \mathcal{L}(\theta_t).
+    }\]</span></p>
+<p>Unlike the NTK regime, individual neurons now move by an <span class="math inline">\(O(1)\)</span> amount during training. Therefore the feature representation can evolve nontrivially.</p>
+<p>Define <span class="math display">\[\vartheta_i
+    =
+    \left(
+        W_i^{(1)},W_i^{(2)}
+    \right)\]</span> and the empirical distribution of neurons <span class="math display">\[\boxed{
+    \mu_t^N
+    =
+    \frac{1}{N}
+    \sum_{i=1}^{N}
+    \delta_{\vartheta_i(t)}.
+    }\]</span></p>
+<p>Then the network output can be written as <span class="math display">\[f_{\mu_t^N}(x)
+    =
+    \int
+    W^{(2)}
+    \phi\!\left(
+        \frac{1}{\sqrt{D}}
+        W^{(1)}\cdot x
+    \right)
+    d\mu_t^N(W^{(1)},W^{(2)}).\]</span></p>
+<p>As <span class="math display">\[N\rightarrow\infty,\]</span> the discrete empirical measure <span class="math inline">\(\mu_t^N\)</span> approaches a continuous probability measure <span class="math inline">\(\mu_t\)</span>.</p>
+<p>Thus instead of describing <span class="math inline">\(N\)</span> individual neurons, we describe the evolution of the distribution of neurons.</p>
+</section>
+<section id="dynamics-of-an-individual-neuron" class="level2">
+<h2><span class="secnum">3.7</span> Dynamics of an Individual Neuron<a class="anchor" href="#dynamics-of-an-individual-neuron" aria-label="Link to this section">#</a></h2>
+<p>Define <span class="math display">\[\psi(\vartheta;x)
+    =
+    W^{(2)}
+    \phi\!\left(
+        \frac{1}{\sqrt{D}}
+        W^{(1)}\cdot x
+    \right).\]</span></p>
+<p>Then <span class="math display">\[f_{\mu}(x)
+=
+\int
+\psi(\vartheta;x)
+\,d\mu(\vartheta).\]</span></p>
+<p>The gradient of the network with respect to neuron <span class="math inline">\(i\)</span> is <span class="math display">\[\nabla_{\vartheta_i}
+    f_\theta(x_\alpha)
+    =
+    \frac{1}{N}
+    \nabla_{\vartheta_i}
+    \psi(\vartheta_i;x_\alpha).\]</span></p>
+<p>Because the learning rate is scaled by <span class="math inline">\(N\)</span>, <span class="math display">\[\begin{aligned}
+    \frac{d}{dt}
+    \vartheta_i(t)
+    &amp;=
+    -\eta N
+    \nabla_{\vartheta_i}
+    \mathcal{L}
+    \\
+    &amp;=
+    -\frac{\eta}{n}
+    \sum_{\alpha=1}^{n}
+    \left(
+        f_{\mu_t}(x_\alpha)-y_\alpha
+    \right)
+    \nabla_{\vartheta_i}
+    \psi(\vartheta_i;x_\alpha).\end{aligned}\]</span></p>
+<p>Therefore, <span class="math display">\[\boxed{
+    \dot{\vartheta}_i
+    =
+    -
+    \eta
+    \mathcal{M}
+    (\vartheta_i,\mu_t).
+    }\]</span> with <span class="math display">\[\mathcal{M}(\vartheta,\mu)
+    =
+    \frac{1}{n}
+    \sum_{\alpha=1}^{n}
+    \left(
+        f_\mu(x_\alpha)-y_\alpha
+    \right)
+    \nabla_\vartheta
+    \psi(\vartheta;x_\alpha),\]</span> which the next section identifies as <span class="math inline">\(\nabla_\vartheta\,\delta\mathcal{L}/\delta\mu\)</span>.</p>
+<p>The important point is that neuron <span class="math inline">\(i\)</span> does not depend directly on all other neurons separately. It depends on them only through the empirical distribution <span class="math display">\[\mu_t.\]</span></p>
+<p>This is a mean-field interaction.</p>
+</section>
+<section id="evolution-of-the-neuron-distribution" class="level2">
+<h2><span class="secnum">3.8</span> Evolution of the Neuron Distribution<a class="anchor" href="#evolution-of-the-neuron-distribution" aria-label="Link to this section">#</a></h2>
+<p>The loss can now be regarded as a functional of the measure, <span class="math display">\[\mathcal{L}[\mu]
+    =
+    \frac{1}{2n}
+    \sum_{\alpha=1}^{n}
+    \left(
+        f_\mu(x_\alpha)-y_\alpha
+    \right)^2.\]</span></p>
+<p>Its functional derivative is <span class="math display">\[\frac{\delta\mathcal{L}}{\delta\mu}
+    (\vartheta)
+    =
+    \frac{1}{n}
+    \sum_{\alpha=1}^{n}
+    \left(
+        f_\mu(x_\alpha)-y_\alpha
+    \right)
+    \psi(\vartheta;x_\alpha).\]</span></p>
+<p>Therefore the particle dynamics becomes <span class="math display">\[\boxed{
+    \dot{\vartheta}
+    =
+    -
+    \eta
+    \nabla_\vartheta
+    \frac{\delta\mathcal{L}}
+         {\delta\mu}(\vartheta).
+    }\]</span></p>
+<p>If the particles follow a velocity field <span class="math display">\[v_t(\vartheta)
+=
+-\eta
+\nabla_\vartheta
+\frac{\delta\mathcal{L}}
+     {\delta\mu_t}(\vartheta),\]</span> conservation of probability gives the continuity equation <span class="math display">\[\partial_t\mu_t
+    +
+    \nabla_\vartheta\cdot
+    \left(
+        \mu_t v_t
+    \right)
+    =
+    0.\]</span></p>
+<p>Substituting <span class="math inline">\(v_t\)</span>, <span class="math display">\[\boxed{
+    \partial_t\mu_t
+    =
+    \eta
+    \nabla_\vartheta\cdot
+    \left(
+        \mu_t
+        \nabla_\vartheta
+        \frac{\delta\mathcal{L}}
+             {\delta\mu_t}
+    \right).
+    }\]</span></p>
+<p>This is a <strong>Wasserstein gradient flow</strong> of the loss functional <span class="math inline">\(\mathcal{L}[\mu]\)</span>.</p>
+<p>Indeed, <span class="math display">\[\frac{d}{dt}\mathcal{L}[\mu_t]
+    =
+    -
+    \eta
+    \int
+    \left\|
+        \nabla_\vartheta
+        \frac{\delta\mathcal{L}}
+             {\delta\mu_t}
+    \right\|^2
+    d\mu_t(\vartheta)
+    \leq 0.\]</span></p>
+<p>Thus gradient descent on a finite collection of neurons becomes, at infinite width, gradient flow of a probability distribution in parameter space.</p>
+</section>
+<section id="ntk-vs.-mean-field" class="level2">
+<h2><span class="secnum">3.9</span> NTK vs. Mean Field<a class="anchor" href="#ntk-vs.-mean-field" aria-label="Link to this section">#</a></h2>
+<p>The two limits therefore have very different physical pictures: <span class="math display">\[\begin{aligned}
+    \text{NTK:}\qquad
+    &amp;\theta_i(t)-\theta_i(0)
+    \rightarrow 0,
+    \\
+    &amp;K_{\theta_t}
+    \approx
+    K_{\theta_0},
+    \\
+    &amp;\text{features are approximately frozen};
+    \\[1em]
+    \text{Mean Field:}\qquad
+    &amp;\theta_i(t)-\theta_i(0)
+    =
+    O(1),
+    \\
+    &amp;\mu_0
+    \rightarrow
+    \mu_t,
+    \\
+    &amp;\text{the neuron distribution and features evolve}.\end{aligned}\]</span></p>
+<p>Hence, <span class="math display">\[\boxed{
+\begin{array}{c}
+\text{NTK limit}
+\\[2mm]
+\text{fixed kernel / lazy feature learning}
+\end{array}
+\qquad\text{vs.}\qquad
+\begin{array}{c}
+\text{Mean-field limit}
+\\[2mm]
+\text{distributional dynamics / feature learning}.
+\end{array}
+}\]</span></p>
+<p>The central conceptual change in the mean-field limit is <span class="math display">\[\boxed{
+\text{many interacting neurons}
+\quad\longrightarrow\quad
+\text{a probability measure evolving by optimal transport}.
+}\]</span></p>
+
+<figure class="widget" id="fig-widthdynamics" data-widget="widthdynamics">
+  <header class="widget-head">
+    <p class="kicker">Interactive figure</p>
+    <h4 class="widget-title">Training a two-layer network in the NTK and mean-field limits</h4>
+  </header>
+  <div class="controls">
+    <div class="control-seg">
+      <span class="seg-label" id="wd-regime-label">Parametrization</span>
+      <div class="segmented" role="group" aria-labelledby="wd-regime-label">
+        <button type="button" id="wd-ntk" aria-pressed="false">NTK, &gamma; = 1</button>
+        <button type="button" id="wd-mf" aria-pressed="true">Mean field, &gamma; = &radic;N</button>
+      </div>
+    </div>
+      <div class="control">
+        <label for="wd-n">width \(N\)</label>
+        <output id="wd-n-out" for="wd-n">256</output>
+        <input type="range" id="wd-n" min="0" max="4" step="1" value="2">
+      </div>
+      <div class="control">
+        <label for="wd-t">training step \(t\)</label>
+        <output id="wd-t-out" for="wd-t">600</output>
+        <input type="range" id="wd-t" min="0" max="600" step="10" value="600">
+      </div>
+    <div class="buttons">
+      <button type="button" class="btn" id="wd-replay">Replay training</button>
+    </div>
+  </div>
+  <div class="panels pair">
+    <canvas class="plot tall" id="wd-fn" role="img" aria-label="Training data and the network function during training"></canvas>
+    <canvas class="plot tall" id="wd-params" role="img" aria-label="Every neuron as a point in parameter space, at initialization and at step t"></canvas>
+  </div>
+  <div class="panels stack sweep">
+    <canvas class="plot short" id="wd-sweep" role="img" aria-label="RMS neuron displacement against width for both parametrizations"></canvas>
+  </div>
+  <p class="readout" id="wd-readout" aria-live="polite"></p>
+  <figcaption>
+    A two-layer tanh network
+    \(f(x)=\frac{1}{\gamma\sqrt N}\sum_i W^{(2)}_i\tanh(W^{(1)}_i\cdot x/\sqrt D)\)
+    with input \(x=(x_1,1)\), so \(D=2\) and the second input weight is a bias,
+    fitted to \(n=8\) samples of \(\sin\pi x_1\) by 600 steps of full-batch
+    gradient descent with learning rate \(\eta\gamma^2\), \(\eta=2\), from
+    \(\mathcal N(0,1)\) weights. Left: data, target and network function at step
+    \(t\) (dashed: \(t=0\)). Right: each neuron as the point
+    \((W^{(1)}_{i1},W^{(2)}_i)\), faint at initialization. Bottom: the RMS neuron
+    displacement \(\bigl(\tfrac1N\sum_i\|\vartheta_i(t)-\vartheta_i(0)\|^2\bigr)^{1/2}\)
+    after training for five widths; the circled point is the run shown above. In the NTK
+    parametrization it falls like \(N^{-1/2}\) and the kernel stops changing; in the
+    mean-field parametrization it stays \(O(1)\) at every width.
+  </figcaption>
+</figure>
+</section>
+
+    </div>
+    <nav class="pager" aria-label="Lectures"><a class="pager-prev" href="lecture2.html"><span>Previous</span>Lecture 2: Scaling Limits of Neural Networks</a></nav>
+    <footer class="page-foot">
+      Generated from <a href="https://github.com/LianghongMo/LLM-note/blob/main/notes/lecture3.tex">notes/lecture3.tex</a>
+      &middot; <a href="notes/LLM-note.pdf">PDF version</a>
+    </footer>
+  </main>
+</div>
+<script defer src="assets/figures.js"></script>
+</body>
+</html>

@@ -192,6 +192,127 @@
     return { paths, s };
   }
 
+  // ---- Two-layer network, NTK vs mean-field parametrization (Lecture 3) ----
+  // f(x) = 1/(gamma sqrt N) sum_i a_i tanh(w_i . x / sqrt D) with x = (x1, 1),
+  // so D = 2 and w_i2 acts as a bias. Full-batch gradient descent on the
+  // squared loss with learning rate eta * gamma^2; gamma = 1 (NTK) or sqrt N.
+  const TL = { n: 8, D: 2, eta: 2, steps: 600, every: 10, widths: [16, 64, 256, 1024, 4096] };
+  TL.X = Array.from({ length: TL.n }, (_, k) => -1 + (2 * k) / (TL.n - 1));
+  TL.Y = TL.X.map((x) => Math.sin(Math.PI * x));
+
+  function twoLayerInit(N, meanField, seed) {
+    const g = gaussian(mulberry32(seed));
+    const a = new Float64Array(N);
+    const w1 = new Float64Array(N);
+    const w2 = new Float64Array(N);
+    for (let i = 0; i < N; i++) {
+      a[i] = g();
+      w1[i] = g();
+      w2[i] = g();
+    }
+    const gam = meanField ? Math.sqrt(N) : 1;
+    return {
+      N, meanField, a, w1, w2, a0: a.slice(), w10: w1.slice(), w20: w2.slice(),
+      pre: 1 / (gam * Math.sqrt(N)), lr: TL.eta * gam * gam, step: 0,
+      th: new Float64Array(N * TL.n), r: new Float64Array(TL.n), loss: NaN,
+    };
+  }
+
+  // forward pass on the training set: fills the activations, residuals and loss
+  function twoLayerForward(s) {
+    const { N, a, w1, w2, pre, th, r } = s;
+    const n = TL.n;
+    const sD = Math.sqrt(TL.D);
+    r.fill(0);
+    for (let i = 0; i < N; i++) {
+      for (let k = 0; k < n; k++) {
+        const t = Math.tanh((w1[i] * TL.X[k] + w2[i]) / sD);
+        th[i * n + k] = t;
+        r[k] += pre * a[i] * t;
+      }
+    }
+    let loss = 0;
+    for (let k = 0; k < n; k++) {
+      r[k] -= TL.Y[k];
+      loss += (r[k] * r[k]) / (2 * n);
+    }
+    s.loss = loss;
+  }
+
+  function twoLayerTrain(s, steps) {
+    const { N, a, w1, w2, pre, lr, th, r } = s;
+    const n = TL.n;
+    const sD = Math.sqrt(TL.D);
+    for (let st = 0; st < steps; st++) {
+      twoLayerForward(s);
+      for (let i = 0; i < N; i++) {
+        let ga = 0;
+        let g1 = 0;
+        let g2 = 0;
+        for (let k = 0; k < n; k++) {
+          const t = th[i * n + k];
+          const q = (r[k] * pre) / n;
+          ga += q * t;
+          const d = (q * a[i] * (1 - t * t)) / sD;
+          g1 += d * TL.X[k];
+          g2 += d;
+        }
+        a[i] -= lr * ga;
+        w1[i] -= lr * g1;
+        w2[i] -= lr * g2;
+      }
+      s.step++;
+    }
+    twoLayerForward(s);
+  }
+
+  function twoLayerEval(s, a, w1, w2, xs) {
+    const sD = Math.sqrt(TL.D);
+    return xs.map((x) => {
+      let f = 0;
+      for (let i = 0; i < s.N; i++) f += a[i] * Math.tanh((w1[i] * x + w2[i]) / sD);
+      return f * s.pre;
+    });
+  }
+
+  // NTK Gram matrix on the training inputs (up to the constant factor pre^2)
+  function twoLayerKernel(s, a, w1, w2) {
+    const n = TL.n;
+    const sD = Math.sqrt(TL.D);
+    const K = new Float64Array(n * n);
+    const t = new Float64Array(n);
+    for (let i = 0; i < s.N; i++) {
+      for (let k = 0; k < n; k++) t[k] = Math.tanh((w1[i] * TL.X[k] + w2[i]) / sD);
+      for (let k = 0; k < n; k++) {
+        for (let l = k; l < n; l++) {
+          const v = t[k] * t[l] + (a[i] * a[i] * (1 - t[k] * t[k]) * (1 - t[l] * t[l]) * (TL.X[k] * TL.X[l] + 1)) / TL.D;
+          K[k * n + l] += v;
+          if (l !== k) K[l * n + k] += v;
+        }
+      }
+    }
+    return K;
+  }
+
+  function relChange(K, K0) {
+    let num = 0;
+    let den = 0;
+    for (let i = 0; i < K.length; i++) {
+      num += (K[i] - K0[i]) * (K[i] - K0[i]);
+      den += K0[i] * K0[i];
+    }
+    return Math.sqrt(num / den);
+  }
+
+  // RMS over neurons of ||theta_i(t) - theta_i(0)||
+  function twoLayerDisplacement(s, a, w1, w2) {
+    let d = 0;
+    for (let i = 0; i < s.N; i++) {
+      d += (a[i] - s.a0[i]) ** 2 + (w1[i] - s.w10[i]) ** 2 + (w2[i] - s.w20[i]) ** 2;
+    }
+    return Math.sqrt(d / s.N);
+  }
+
   function quantile(sorted, q) {
     const i = (sorted.length - 1) * q;
     const lo = Math.floor(i);
@@ -203,6 +324,7 @@
     mulberry32, gaussian, mpEdges, mpDensity, mpIntegrate, ridgeRisk,
     mixAt, mixDensity, mixScore, sampleMix, pfOdeStepBack, T_MAX,
     simDeepLinear, simResNet, quantile,
+    TL, twoLayerInit, twoLayerForward, twoLayerTrain, twoLayerEval, twoLayerKernel, relChange, twoLayerDisplacement,
   };
 
   if (typeof module !== 'undefined' && module.exports) module.exports = core;
@@ -272,6 +394,7 @@
       this.pw = w - this.margin.l - this.margin.r;
       this.ph = h - this.margin.t - this.margin.b;
       this.xlog = !!opt.xlog;
+      this.ylog = !!opt.ylog;
       this.x0 = x0; this.x1 = x1; this.y0 = y0; this.y1 = y1;
       this.col = tokens();
       this.font = `11px ${this.col.mono}`;
@@ -289,6 +412,11 @@
     }
 
     Y(y) {
+      if (this.ylog) {
+        const a = Math.log10(this.y0);
+        const b = Math.log10(this.y1);
+        return this.margin.t + (1 - (Math.log10(y) - a) / (b - a)) * this.ph;
+      }
       return this.margin.t + (1 - (y - this.y0) / (this.y1 - this.y0)) * this.ph;
     }
 
@@ -299,7 +427,7 @@
       c.font = this.font;
       c.lineWidth = 1;
       const xt = o.xticks || (this.xlog ? logTicks(this.x0, this.x1) : linTicks(this.x0, this.x1, o.nx || 6));
-      const yt = o.yticks || linTicks(this.y0, this.y1, o.ny || 4);
+      const yt = o.yticks || (this.ylog ? logTicks(this.y0, this.y1) : linTicks(this.y0, this.y1, o.ny || 4));
       // grid
       c.strokeStyle = col.rule;
       c.globalAlpha = 0.7;
@@ -390,7 +518,7 @@
       c.save();
       c.fillStyle = o.color;
       c.globalAlpha = o.alpha == null ? 1 : o.alpha;
-      const yb = this.Y(Math.max(this.y0, 0));
+      const yb = this.ylog ? this.Y(this.y0) : this.Y(Math.max(this.y0, 0));
       for (let i = 0; i < heights.length; i++) {
         if (heights[i] <= 0) continue;
         const xa = this.X(edges[i]);
@@ -424,6 +552,17 @@
 
     hline(y, o) {
       return this.line([this.x0, this.x1], [y, y], o || {});
+    }
+
+    points(xs, ys, o) {
+      const c = this.ctx;
+      const h = (o.size || 2) / 2;
+      c.save();
+      c.fillStyle = o.color;
+      c.globalAlpha = o.alpha == null ? 1 : o.alpha;
+      for (let i = 0; i < xs.length; i++) c.fillRect(this.X(xs[i]) - h, this.Y(ys[i]) - h, 2 * h, 2 * h);
+      c.restore();
+      return this;
     }
 
     dot(x, y, o) {
@@ -847,6 +986,229 @@
 
     gIn.addEventListener('input', draw);
     sIn.addEventListener('input', draw);
+    return draw;
+  };
+
+  // ---- Lecture 3: NTK vs mean-field training of a two-layer network ----
+  widgets.widthdynamics = function () {
+    const NS = TL.widths;
+    const SEED = 1;
+    const ntkBtn = $('wd-ntk');
+    const mfBtn = $('wd-mf');
+    const nIn = $('wd-n');
+    const tIn = $('wd-t');
+    const replayBtn = $('wd-replay');
+    const pf = new Plot($('wd-fn'));
+    const pp = new Plot($('wd-params'));
+    const ps = new Plot($('wd-sweep'), { l: 46, t: 24, b: 36 });
+    const xs = linspace(-1.15, 1.15, 81);
+
+    let meanField = mfBtn.getAttribute('aria-pressed') === 'true';
+    let run = null; // { s, snaps, K0, done }
+    let job = 0;
+    let playing = false;
+    const sweep = new Map(); // `${meanField}-${N}` -> displacement after TL.steps
+    const key = (mf, N) => `${mf ? 1 : 0}-${N}`;
+
+    function snapshot(s) {
+      return { step: s.step, loss: s.loss, a: s.a.slice(), w1: s.w1.slice(), w2: s.w2.slice() };
+    }
+
+    // train in slices of ~4e5 neuron-sample updates so the page stays responsive
+    function sliceSteps(N) {
+      return Math.max(TL.every, Math.floor(4e5 / (N * TL.n) / TL.every) * TL.every);
+    }
+
+    function start() {
+      const N = NS[parseInt(nIn.value, 10)];
+      $('wd-n-out').textContent = String(N);
+      const s = twoLayerInit(N, meanField, SEED);
+      twoLayerForward(s);
+      run = { s, snaps: [snapshot(s)], K0: twoLayerKernel(s, s.a, s.w1, s.w2), done: false };
+      const my = ++job;
+      tIn.disabled = replayBtn.disabled = true;
+      // small widths train in one go (~25 ms at N = 256), so the figure is complete
+      // as soon as it appears; larger widths train in timer slices, redrawing after
+      // each one (timers keep running where animation frames are paused)
+      const slice = N <= 256 ? TL.steps : sliceSteps(N);
+      const work = () => {
+        if (my !== job) return;
+        const target = Math.min(TL.steps, s.step + slice);
+        while (s.step < target) {
+          twoLayerTrain(s, TL.every);
+          run.snaps.push(snapshot(s));
+        }
+        tIn.value = String(s.step);
+        if (s.step < TL.steps) {
+          draw();
+          setTimeout(work, 0);
+        } else {
+          run.done = true;
+          sweep.set(key(meanField, N), twoLayerDisplacement(s, s.a, s.w1, s.w2));
+          tIn.disabled = replayBtn.disabled = false;
+          draw();
+          runSweep();
+        }
+      };
+      work();
+    }
+
+    // background sweep over widths and both parametrizations for the bottom panel
+    let sweepBusy = false;
+    function runSweep() {
+      if (sweepBusy) return;
+      const todo = [];
+      for (const mf of [false, true]) for (const N of NS) if (!sweep.has(key(mf, N))) todo.push([mf, N]);
+      if (!todo.length) return;
+      sweepBusy = true;
+      const [mf, N] = todo[0];
+      const s = twoLayerInit(N, mf, SEED);
+      const chunk = () => {
+        if (run && !run.done) {
+          setTimeout(chunk, 50); // the visible run has priority
+          return;
+        }
+        twoLayerTrain(s, Math.min(sliceSteps(N), TL.steps - s.step));
+        if (s.step < TL.steps) {
+          setTimeout(chunk, 0);
+          return;
+        }
+        sweep.set(key(mf, N), twoLayerDisplacement(s, s.a, s.w1, s.w2));
+        sweepBusy = false;
+        drawSweep();
+        setTimeout(runSweep, 0);
+      };
+      setTimeout(chunk, 0);
+    }
+
+    function currentSnap() {
+      const t = parseInt(tIn.value, 10);
+      const snaps = run.snaps;
+      return snaps[Math.min(snaps.length - 1, Math.round(t / TL.every))];
+    }
+
+    function drawSweep() {
+      ps.begin(10, 6500, 0.1, 10, { xlog: true, ylog: true }).axes({
+        title: 'RMS neuron displacement after 600 steps',
+        xlabel: 'width N (log scale)',
+      });
+      const col = ps.col;
+      ps.clip(() => {
+        const ref = sweep.get(key(false, 1024));
+        if (ref) {
+          const c = ref * Math.sqrt(1024);
+          ps.line([10, 6500], [c / Math.sqrt(10), c / Math.sqrt(6500)], { color: col.muted, width: 1, dash: [4, 4] });
+        }
+        for (const [mf, color] of [[false, col.accent], [true, col.theory]]) {
+          const pts = NS.filter((N) => sweep.has(key(mf, N)));
+          ps.line(pts, pts.map((N) => sweep.get(key(mf, N))), { color, width: 1.6 });
+          for (const N of pts) ps.dot(N, sweep.get(key(mf, N)), { color, r: 3.5 });
+        }
+        if (run && run.done) {
+          const v = sweep.get(key(meanField, run.s.N));
+          const c = ps.ctx;
+          c.save();
+          c.strokeStyle = col.ink;
+          c.lineWidth = 1.5;
+          c.beginPath();
+          c.arc(ps.X(run.s.N), ps.Y(v), 7, 0, 2 * Math.PI);
+          c.stroke();
+          c.restore();
+        }
+      });
+      ps.text(12, 0.13, 'dashed: slope −1/2', { color: col.muted });
+    }
+
+    function draw() {
+      if (!run) return;
+      const s = run.s;
+      const snap = currentSnap();
+      const col = tokens();
+
+      // function space
+      const f0 = twoLayerEval(s, s.a0, s.w10, s.w20, xs);
+      const ft = twoLayerEval(s, snap.a, snap.w1, snap.w2, xs);
+      pf.begin(-1.15, 1.15, -2, 2).axes({ title: 'network function fₜ(x)', xlabel: 'input x₁', ny: 4, nx: 5 });
+      pf.clip(() => {
+        pf.line(xs, xs.map((x) => Math.sin(Math.PI * x)), { color: col.rule, width: 6 });
+        pf.line(xs, f0, { color: col.muted, width: 1.2, dash: [4, 3] });
+        pf.line(xs, ft, { color: col.accent, width: 2.2 });
+        TL.X.forEach((x, k) => pf.dot(x, TL.Y[k], { color: col.theory, r: 3.5 }));
+      });
+
+      // parameter space: every neuron as a point (W1_i1, W2_i), with fixed axes for the whole run
+      if (!run.lim || !run.done) {
+        let m = 3.2;
+        const last = run.snaps[run.snaps.length - 1];
+        const vals = Array.from(last.w1).concat(Array.from(last.a)).map(Math.abs).sort((p, q) => p - q);
+        m = Math.max(m, quantile(vals, 0.995) * 1.08);
+        run.lim = Math.max(run.lim || 0, m);
+      }
+      const L = run.lim;
+      pp.begin(-L, L, -L, L).axes({ title: 'each neuron: output weight vs input weight', xlabel: 'input weight', ny: 4, nx: 4 });
+      const size = s.N > 1000 ? 1.6 : s.N > 200 ? 2.2 : 3.2;
+      pp.clip(() => {
+        pp.points(s.w10, s.a0, { color: col.muted, alpha: 0.35, size });
+        pp.points(snap.w1, snap.a, { color: col.accent, alpha: s.N > 1000 ? 0.45 : 0.75, size });
+      });
+
+      drawSweep();
+
+      const disp = twoLayerDisplacement(s, snap.a, snap.w1, snap.w2);
+      const dK = relChange(twoLayerKernel(s, snap.a, snap.w1, snap.w2), run.K0);
+      $('wd-t-out').textContent = String(snap.step);
+      $('wd-readout').innerHTML = [
+        legend(col.accent, 'fₜ'),
+        legend(col.muted, 'f₀', true),
+        legend(col.theory, 'data'),
+        `<span>loss: <b>${snap.loss < 1e-3 ? snap.loss.toExponential(1) : fmt(snap.loss, 4)}</b></span>`,
+        `<span>RMS displacement: <b>${fmt(disp, 3)}</b></span>`,
+        `<span>‖Kₜ − K₀‖/‖K₀‖: <b>${fmt(dK, 3)}</b></span>`,
+        legend(col.accent, 'sweep: NTK'),
+        legend(col.theory, 'sweep: mean field'),
+      ].join('');
+    }
+
+    function setRegime(mf) {
+      meanField = mf;
+      mfBtn.setAttribute('aria-pressed', String(mf));
+      ntkBtn.setAttribute('aria-pressed', String(!mf));
+      start();
+    }
+
+    function replay() {
+      if (!run || !run.done || playing) return;
+      if (reduceMotion) {
+        tIn.value = String(TL.steps);
+        draw();
+        return;
+      }
+      playing = true;
+      replayBtn.disabled = true;
+      const t0 = performance.now();
+      const frame = (now) => {
+        const u = Math.min(1, (now - t0) / 2200);
+        tIn.value = String(Math.round((u * TL.steps) / TL.every) * TL.every);
+        draw();
+        if (u < 1) requestAnimationFrame(frame);
+        else {
+          playing = false;
+          replayBtn.disabled = false;
+        }
+      };
+      requestAnimationFrame(frame);
+    }
+
+    ntkBtn.addEventListener('click', () => setRegime(false));
+    mfBtn.addEventListener('click', () => setRegime(true));
+    nIn.addEventListener('change', start);
+    nIn.addEventListener('input', () => {
+      $('wd-n-out').textContent = String(NS[parseInt(nIn.value, 10)]);
+    });
+    tIn.addEventListener('input', draw);
+    replayBtn.addEventListener('click', replay);
+
+    start();
     return draw;
   };
 

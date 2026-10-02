@@ -45,6 +45,19 @@ LECTURES = [
         ),
         "formula": r"\xi=L/N,\qquad s_L\sim L^{-1/2},\qquad \gamma=d/n",
     },
+    {
+        "num": 3,
+        "tex": "lecture3.tex",
+        "page": "lecture3.html",
+        "abstract": (
+            "How the initialization and learning rate must scale with width for "
+            "training to have an infinite-width limit. The NTK parametrization "
+            "freezes the features and reduces training to kernel regression; the "
+            "mean-field parametrization lets every neuron move, and gradient "
+            "descent becomes a Wasserstein gradient flow of the neuron distribution."
+        ),
+        "formula": r"\partial_t\mu_t=\eta\,\nabla_\vartheta\cdot\Big(\mu_t\,\nabla_\vartheta\frac{\delta\mathcal L}{\delta\mu_t}\Big)",
+    },
 ]
 
 FONTS = (
@@ -174,6 +187,48 @@ WIDGETS = {
 </figure>""",
 }
 
+WIDGETS["widthdynamics"] = lambda: f"""
+<figure class="widget" id="fig-widthdynamics" data-widget="widthdynamics">
+  <header class="widget-head">
+    <p class="kicker">Interactive figure</p>
+    <h4 class="widget-title">Training a two-layer network in the NTK and mean-field limits</h4>
+  </header>
+  <div class="controls">
+    <div class="control-seg">
+      <span class="seg-label" id="wd-regime-label">Parametrization</span>
+      <div class="segmented" role="group" aria-labelledby="wd-regime-label">
+        <button type="button" id="wd-ntk" aria-pressed="false">NTK, &gamma; = 1</button>
+        <button type="button" id="wd-mf" aria-pressed="true">Mean field, &gamma; = &radic;N</button>
+      </div>
+    </div>{slider("wd-n", r"width \(N\)", 0, 4, 1, 2, "256")}{slider("wd-t", r"training step \(t\)", 0, 600, 10, 600, "600")}
+    <div class="buttons">
+      <button type="button" class="btn" id="wd-replay">Replay training</button>
+    </div>
+  </div>
+  <div class="panels pair">
+    <canvas class="plot tall" id="wd-fn" role="img" aria-label="Training data and the network function during training"></canvas>
+    <canvas class="plot tall" id="wd-params" role="img" aria-label="Every neuron as a point in parameter space, at initialization and at step t"></canvas>
+  </div>
+  <div class="panels stack sweep">
+    <canvas class="plot short" id="wd-sweep" role="img" aria-label="RMS neuron displacement against width for both parametrizations"></canvas>
+  </div>
+  <p class="readout" id="wd-readout" aria-live="polite"></p>
+  <figcaption>
+    A two-layer tanh network
+    \\(f(x)=\\frac{{1}}{{\\gamma\\sqrt N}}\\sum_i W^{{(2)}}_i\\tanh(W^{{(1)}}_i\\cdot x/\\sqrt D)\\)
+    with input \\(x=(x_1,1)\\), so \\(D=2\\) and the second input weight is a bias,
+    fitted to \\(n=8\\) samples of \\(\\sin\\pi x_1\\) by 600 steps of full-batch
+    gradient descent with learning rate \\(\\eta\\gamma^2\\), \\(\\eta=2\\), from
+    \\(\\mathcal N(0,1)\\) weights. Left: data, target and network function at step
+    \\(t\\) (dashed: \\(t=0\\)). Right: each neuron as the point
+    \\((W^{{(1)}}_{{i1}},W^{{(2)}}_i)\\), faint at initialization. Bottom: the RMS neuron
+    displacement \\(\\bigl(\\tfrac1N\\sum_i\\|\\vartheta_i(t)-\\vartheta_i(0)\\|^2\\bigr)^{{1/2}}\\)
+    after training for five widths; the circled point is the run shown above. In the NTK
+    parametrization it falls like \\(N^{{-1/2}}\\) and the kernel stops changing; in the
+    mean-field parametrization it stays \\(O(1)\\) at every width.
+  </figcaption>
+</figure>"""
+
 # ---------------------------------------------------------------------------
 # LaTeX -> HTML
 # ---------------------------------------------------------------------------
@@ -276,7 +331,7 @@ def foot(full: bool) -> str:
     return "</body>\n</html>\n" if full else ""
 
 
-def topbar(active: str, pdf_href: str) -> str:
+def topbar(active: str, pdf_href: str, lectures) -> str:
     def link(href, label, key):
         cur = ' aria-current="page"' if key == active else ""
         return f'<a href="{href}"{cur}>{label}</a>'
@@ -284,8 +339,7 @@ def topbar(active: str, pdf_href: str) -> str:
     return f"""<header class="topbar">
   <a class="wordmark" href="index.html">LLM-note</a>
   <nav aria-label="Site">
-    {link("lecture1.html", "Lecture 1", "1")}
-    {link("lecture2.html", "Lecture 2", "2")}
+    {"".join(link(l["page"], f"Lecture {l['num']}", str(l["num"])) for l in lectures)}
     <a href="{pdf_href}">PDF</a>
     <a href="{REPO_URL}">Source</a>
   </nav>
@@ -323,7 +377,7 @@ def lecture_page(lec, lectures, pdf_href) -> str:
     toc = toc_html(lec["toc"])
     return (
         head(f'Lecture {n}: {strip_tags(lec["title"])} · LLM-note', lec["abstract"], True)
-        + topbar(str(n), pdf_href)
+        + topbar(str(n), pdf_href, lectures)
         + f"""
 <div class="layout">
   <aside class="toc-rail" aria-label="Contents">
@@ -362,6 +416,7 @@ def lecture_page(lec, lectures, pdf_href) -> str:
 
 
 def index_page(lectures, pdf_href, full=True) -> str:
+    n_figures = sum(l["body"].count("data-widget=") for l in lectures)
     cards = []
     for lec in lectures:
         items = "".join(
@@ -370,27 +425,29 @@ def index_page(lectures, pdf_href, full=True) -> str:
         )
         cards.append(f"""
     <article class="lecture-card">
-      <p class="kicker">Lecture {lec["num"]}</p>
-      <h3><a href="{lec["page"]}">{lec["title"]}</a></h3>
-      <p>{lec["abstract"]}</p>
-      <p class="card-formula">\\[{lec["formula"]}\\]</p>
-      <ol class="card-sections">{items}</ol>
-      <a class="btn primary" href="{lec["page"]}">Read lecture {lec["num"]}</a>
+      <div class="card-main">
+        <p class="kicker">Lecture {lec["num"]}</p>
+        <h3><a href="{lec["page"]}">{lec["title"]}</a></h3>
+        <p>{lec["abstract"]}</p>
+        <p class="card-formula">\\[{lec["formula"]}\\]</p>
+        <a class="btn primary" href="{lec["page"]}">Read lecture {lec["num"]}</a>
+      </div>
+      <ol class="card-sections" aria-label="Sections">{items}</ol>
     </article>""")
 
     return (
         head("LLM-note", "Lecture notes on the theory of neural networks: scaling limits, feature learning, and diffusion models.", full)
-        + topbar("home", pdf_href)
+        + topbar("home", pdf_href, lectures)
         + f"""
 <main class="home">
   <section class="hero">
     <h1>LLM-note</h1>
     <p class="lede">Lecture notes on the theory of neural networks: scaling limits,
-    feature learning, and diffusion models, read through the lens of statistical
-    physics. Large networks are treated the way a physicist treats a many-body
+    infinite-width training dynamics, feature learning, and diffusion models, read
+    through the lens of statistical physics. Large networks are treated the way a physicist treats a many-body
     system: look for the few macroscopic variables and dimensionless ratios that
     survive the limit.</p>
-    <p class="meta">2 lectures &middot; 4 interactive figures &middot;
+    <p class="meta">{len(lectures)} lectures &middot; {n_figures} interactive figures &middot;
       <a href="{pdf_href}">PDF</a> &middot; <a href="{REPO_URL}">LaTeX source</a></p>
   </section>
 

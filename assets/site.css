@@ -335,6 +335,30 @@ span.math.display { display: block; }
 .control input[type="range"]:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 3px var(--accent-soft); }
 .control input[type="range"]:disabled { opacity: 0.5; cursor: progress; }
 .buttons { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.control-seg { display: flex; flex-direction: column; gap: 0.3rem; flex: 1 1 100%; min-width: 0; }
+.seg-label { font-family: var(--font-display); font-size: 0.88rem; font-weight: 500; color: var(--ink-2); }
+.segmented {
+  display: inline-flex;
+  align-self: flex-start;
+  max-width: 100%;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.segmented button {
+  padding: 0.42rem 0.9rem;
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--accent);
+  background: var(--sheet);
+  border: 0;
+  cursor: pointer;
+}
+.segmented button + button { border-left: 1px solid var(--accent); }
+.segmented button:hover { background: var(--accent-soft); }
+.segmented button[aria-pressed="true"] { color: var(--on-accent); background: var(--accent); }
+.segmented button:focus-visible { outline-offset: -3px; outline-color: var(--accent-strong); }
 .btn {
   display: inline-block;
   padding: 0.45rem 0.95rem;
@@ -354,6 +378,7 @@ span.math.display { display: block; }
 .btn:disabled { opacity: 0.55; cursor: progress; }
 
 .panels { display: grid; gap: 0.6rem; }
+.panels.sweep { margin-top: 0.6rem; }
 .panels.pair { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 @media (max-width: 640px) { .panels.pair { grid-template-columns: minmax(0, 1fr); } }
 .plot { display: block; width: 100%; max-width: 100%; }
@@ -441,12 +466,12 @@ span.math.display { display: block; }
 
 .lectures {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 26rem), 1fr));
   gap: 1.25rem;
 }
 .lecture-card {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+  gap: 0.5rem 2.2rem;
   min-width: 0;
   padding: 1.3rem 1.4rem 1.4rem;
   background: var(--sheet);
@@ -457,19 +482,25 @@ span.math.display { display: block; }
 .lecture-card h3 { margin: 0.35rem 0 0.6rem; font-size: 1.35rem; font-weight: 700; letter-spacing: -0.015em; }
 .lecture-card h3 a { color: var(--ink); text-decoration: none; }
 .lecture-card h3 a:hover { color: var(--accent); }
-.lecture-card > p { margin: 0 0 0.6rem; }
+.card-main { display: flex; flex-direction: column; min-width: 0; }
+.card-main > p { margin: 0 0 0.6rem; }
 .card-formula { overflow-x: auto; overflow-y: hidden; margin: 0.3rem 0 0.6rem; border-block: 1px solid var(--rule); }
 .card-formula mjx-container[display="true"] { margin: 0.6rem 0 !important; }
 .card-sections {
   list-style: none;
-  margin: 0.3rem 0 1.2rem;
-  padding: 0;
+  align-self: start;
+  margin: 1.6rem 0 0;
+  padding: 0 0 0 1.4rem;
+  border-left: 1px solid var(--rule);
   font-family: var(--font-display);
   font-size: 0.88rem;
-  flex: 1;
 }
 .card-sections li { padding: 0.18rem 0; }
-.lecture-card .btn { align-self: flex-start; }
+.lecture-card .btn { align-self: flex-start; margin-top: 0.4rem; }
+@media (max-width: 760px) {
+  .lecture-card { grid-template-columns: minmax(0, 1fr); }
+  .card-sections { margin-top: 0.6rem; padding: 0.8rem 0 0; border-left: 0; border-top: 1px solid var(--rule); }
+}
 
 .ratios { margin-top: 3.5rem; max-width: 46rem; }
 .ratios h2 { font-size: 1.6rem; font-weight: 700; letter-spacing: -0.015em; margin: 0 0 0.6rem; }

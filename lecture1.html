@@ -23,8 +23,7 @@ window.MathJax = {
 <header class="topbar">
   <a class="wordmark" href="index.html">LLM-note</a>
   <nav aria-label="Site">
-    <a href="lecture1.html" aria-current="page">Lecture 1</a>
-    <a href="lecture2.html">Lecture 2</a>
+    <a href="lecture1.html" aria-current="page">Lecture 1</a><a href="lecture2.html">Lecture 2</a><a href="lecture3.html">Lecture 3</a>
     <a href="notes/LLM-note.pdf">PDF</a>
     <a href="https://github.com/LianghongMo/LLM-note">Source</a>
   </nav>
@@ -580,7 +579,7 @@ window.MathJax = {
     }\]</span> whereas other scaling limits can preserve nontrivial feature dynamics.</p>
 <section id="remark-parametrization." class="level5">
 <h5 class="runin">Remark (parametrization).</h5>
-<p>The prefactor <span class="math inline">\(1/\sqrt m\)</span> used here is the NTK scaling, while the mean-field model of Section <a href="#sec:meanfield" data-reference-type="ref" data-reference="sec:meanfield">1.2.4.2</a> uses <span class="math inline">\(1/m\)</span>. With <span class="math inline">\(1/\sqrt m\)</span> and an <span class="math inline">\(O(1)\)</span> learning rate, each <span class="math inline">\(w_j\)</span> moves by only <span class="math inline">\(O(1/\sqrt m)\)</span> during training, so the features freeze as <span class="math inline">\(m\to\infty\)</span>. With <span class="math inline">\(1/m\)</span> and a learning rate scaled up by <span class="math inline">\(m\)</span>, each <span class="math inline">\(w_j\)</span> moves by <span class="math inline">\(O(1)\)</span>. The choice of normalization is therefore what selects lazy versus feature-learning behavior.</p>
+<p>The prefactor <span class="math inline">\(1/\sqrt m\)</span> used here is the NTK scaling, while the mean-field model of Section <a href="#sec:meanfield" data-reference-type="ref" data-reference="sec:meanfield">1.2.4.2</a> uses <span class="math inline">\(1/m\)</span>. With <span class="math inline">\(1/\sqrt m\)</span> and an <span class="math inline">\(O(1)\)</span> learning rate, each <span class="math inline">\(w_j\)</span> moves by only <span class="math inline">\(O(1/\sqrt m)\)</span> during training, so the features freeze as <span class="math inline">\(m\to\infty\)</span>. With <span class="math inline">\(1/m\)</span> and a learning rate scaled up by <span class="math inline">\(m\)</span>, each <span class="math inline">\(w_j\)</span> moves by <span class="math inline">\(O(1)\)</span>. The choice of normalization is therefore what selects lazy versus feature-learning behavior; Lecture 3 derives both limits.</p>
 </section>
 </section>
 <section id="what-is-a-semantic-feature" class="level3">
