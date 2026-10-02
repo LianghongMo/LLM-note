@@ -31,7 +31,7 @@ COURSE = {
 }
 NOTE_TAKER = "Lianghong Mo"
 CREDIT = (
-    f'Notes by {NOTE_TAKER} for {COURSE["instructor"]}\'s reading course '
+    f'Notes by {NOTE_TAKER} for {COURSE["instructor"]}\'s informal seminar '
     f'<a href="{COURSE["url"]}"><em>{COURSE["title"]}</em></a> '
     f'({COURSE["where"]}, {COURSE["term"]}).'
 )
@@ -406,7 +406,7 @@ def lecture_page(lec, lectures, pdf_href) -> str:
     <header class="lecture-head">
       <p class="kicker">Lecture {n} &middot; {lec["date"]}</p>
       <h1>{lec["title"]}</h1>
-      <p class="course-credit">Notes for {COURSE["instructor"]}'s reading course
+      <p class="course-credit">Notes for {COURSE["instructor"]}'s informal seminar
         <a href="{COURSE["url"]}"><em>{COURSE["title"]}</em></a> &middot; {COURSE["where"]}, {COURSE["term"]}</p>
       <p class="lede">{lec["abstract"]}</p>
       <p class="head-formula">\\({lec["formula"]}\\)</p>
@@ -457,13 +457,13 @@ def index_page(lectures, pdf_href, full=True) -> str:
     </article>""")
 
     return (
-        head("LLM-note", f"Notes for {COURSE['instructor']}'s reading course {COURSE['title']} ({COURSE['where']}, {COURSE['term']}): scaling limits, infinite-width training dynamics, feature learning, and diffusion models.", full)
+        head("LLM-note", f"Notes for {COURSE['instructor']}'s informal seminar {COURSE['title']} ({COURSE['where']}, {COURSE['term']}): scaling limits, infinite-width training dynamics, feature learning, and diffusion models.", full)
         + topbar("home", pdf_href, lectures)
         + f"""
 <main class="home">
   <section class="hero">
     <h1>LLM-note</h1>
-    <p class="lede">Notes for {COURSE["instructor"]}'s reading course
+    <p class="lede">Notes for {COURSE["instructor"]}'s informal seminar
     <a href="{COURSE["url"]}"><em>{COURSE["title"]}</em></a> ({COURSE["where"]}, {COURSE["term"]}):
     scaling limits, infinite-width training dynamics, feature learning, and diffusion
     models, read through the lens of statistical physics. Large networks are treated

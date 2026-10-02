@@ -1,6 +1,6 @@
 # LLM-note
 
-Notes for Boris Hanin's reading course **Theory of Deep Learning** (Princeton,
+Notes for Boris Hanin's informal seminar **Theory of Deep Learning** (Princeton,
 Fall 2026): scaling limits, infinite-width training dynamics, feature
 learning, and diffusion models, written from a statistical-physics point of view.
 
