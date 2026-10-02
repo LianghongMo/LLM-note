@@ -21,9 +21,26 @@ ROOT = Path(__file__).resolve().parents[1]
 NOTES = ROOT / "notes"
 REPO_URL = "https://github.com/LianghongMo/LLM-note"
 
+# The course these notes follow; credited on every page and in the PDF.
+COURSE = {
+    "title": "Theory of Deep Learning",
+    "instructor": "Boris Hanin",
+    "where": "Princeton",
+    "term": "Fall 2026",
+    "url": "https://boris-hanin.github.io/informal-course-2026/",
+}
+NOTE_TAKER = "Lianghong Mo"
+CREDIT = (
+    f'Lectures by {COURSE["instructor"]} in his reading course '
+    f'<a href="{COURSE["url"]}"><em>{COURSE["title"]}</em></a> '
+    f'({COURSE["where"]}, {COURSE["term"]}). Unofficial notes by {NOTE_TAKER}; '
+    "any errors are the note-taker's."
+)
+
 LECTURES = [
     {
         "num": 1,
+        "date": "Sep 10, 2026",
         "tex": "lecture1.tex",
         "page": "lecture1.html",
         "abstract": (
@@ -36,6 +53,7 @@ LECTURES = [
     },
     {
         "num": 2,
+        "date": "Sep 17, 2026",
         "tex": "lecture2.tex",
         "page": "lecture2.html",
         "abstract": (
@@ -47,6 +65,7 @@ LECTURES = [
     },
     {
         "num": 3,
+        "date": "Sep 24, 2026",
         "tex": "lecture3.tex",
         "page": "lecture3.html",
         "abstract": (
@@ -386,8 +405,10 @@ def lecture_page(lec, lectures, pdf_href) -> str:
   </aside>
   <main class="article" id="top">
     <header class="lecture-head">
-      <p class="kicker">Lecture {n}</p>
+      <p class="kicker">Lecture {n} &middot; {lec["date"]}</p>
       <h1>{lec["title"]}</h1>
+      <p class="course-credit"><a href="{COURSE["url"]}">{COURSE["title"]}</a>
+        &middot; {COURSE["instructor"]} &middot; {COURSE["where"]}, {COURSE["term"]}</p>
       <p class="lede">{lec["abstract"]}</p>
       <p class="head-formula">\\({lec["formula"]}\\)</p>
     </header>
@@ -404,8 +425,9 @@ def lecture_page(lec, lectures, pdf_href) -> str:
     </div>
     <nav class="pager" aria-label="Lectures">{"".join(pager)}</nav>
     <footer class="page-foot">
-      Generated from <a href="{REPO_URL}/blob/main/notes/{lec["tex"]}">notes/{lec["tex"]}</a>
-      &middot; <a href="{pdf_href}">PDF version</a>
+      <p>{CREDIT}</p>
+      <p>Generated from <a href="{REPO_URL}/blob/main/notes/{lec["tex"]}">notes/{lec["tex"]}</a>
+      &middot; <a href="{pdf_href}">PDF version</a></p>
     </footer>
   </main>
 </div>
@@ -426,7 +448,7 @@ def index_page(lectures, pdf_href, full=True) -> str:
         cards.append(f"""
     <article class="lecture-card">
       <div class="card-main">
-        <p class="kicker">Lecture {lec["num"]}</p>
+        <p class="kicker">Lecture {lec["num"]} &middot; {lec["date"]}</p>
         <h3><a href="{lec["page"]}">{lec["title"]}</a></h3>
         <p>{lec["abstract"]}</p>
         <p class="card-formula">\\[{lec["formula"]}\\]</p>
@@ -436,19 +458,23 @@ def index_page(lectures, pdf_href, full=True) -> str:
     </article>""")
 
     return (
-        head("LLM-note", "Lecture notes on the theory of neural networks: scaling limits, feature learning, and diffusion models.", full)
+        head("LLM-note", f"Unofficial notes on {COURSE['instructor']}'s {COURSE['title']} reading course ({COURSE['where']}, {COURSE['term']}): scaling limits, infinite-width training dynamics, feature learning, and diffusion models.", full)
         + topbar("home", pdf_href, lectures)
         + f"""
 <main class="home">
   <section class="hero">
     <h1>LLM-note</h1>
-    <p class="lede">Lecture notes on the theory of neural networks: scaling limits,
-    infinite-width training dynamics, feature learning, and diffusion models, read
-    through the lens of statistical physics. Large networks are treated the way a physicist treats a many-body
-    system: look for the few macroscopic variables and dimensionless ratios that
-    survive the limit.</p>
+    <p class="lede">Notes on <a href="{COURSE["url"]}"><em>{COURSE["title"]}</em></a>,
+    {COURSE["instructor"]}'s reading course at {COURSE["where"]} ({COURSE["term"]}):
+    scaling limits, infinite-width training dynamics, feature learning, and diffusion
+    models, read through the lens of statistical physics. Large networks are treated
+    the way a physicist treats a many-body system: look for the few macroscopic
+    variables and dimensionless ratios that survive the limit.</p>
     <p class="meta">{len(lectures)} lectures &middot; {n_figures} interactive figures &middot;
-      <a href="{pdf_href}">PDF</a> &middot; <a href="{REPO_URL}">LaTeX source</a></p>
+      <a href="{pdf_href}">PDF</a> &middot; <a href="{REPO_URL}">LaTeX source</a> &middot;
+      <a href="{COURSE["url"]}">Course page</a></p>
+    <p class="course-credit">Lectures by {COURSE["instructor"]}. Unofficial notes by
+      {NOTE_TAKER}; any errors are the note-taker's.</p>
   </section>
 
   <section class="lectures" aria-label="Lectures">{"".join(cards)}
@@ -472,8 +498,9 @@ def index_page(lectures, pdf_href, full=True) -> str:
   </section>
 
   <footer class="page-foot">
-    Generated from the LaTeX sources in <a href="{REPO_URL}/tree/main/notes">notes/</a>
-    with <code>python tools/build_site.py</code>.
+    <p>{CREDIT}</p>
+    <p>Generated from the LaTeX sources in <a href="{REPO_URL}/tree/main/notes">notes/</a>
+    with <code>python tools/build_site.py</code>.</p>
   </footer>
 </main>
 """

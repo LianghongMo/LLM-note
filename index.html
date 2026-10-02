@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>LLM-note</title>
-<meta name="description" content="Lecture notes on the theory of neural networks: scaling limits, feature learning, and diffusion models.">
+<meta name="description" content="Unofficial notes on Boris Hanin&#x27;s Theory of Deep Learning reading course (Princeton, Fall 2026): scaling limits, infinite-width training dynamics, feature learning, and diffusion models.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap">
@@ -31,19 +31,23 @@ window.MathJax = {
 <main class="home">
   <section class="hero">
     <h1>LLM-note</h1>
-    <p class="lede">Lecture notes on the theory of neural networks: scaling limits,
-    infinite-width training dynamics, feature learning, and diffusion models, read
-    through the lens of statistical physics. Large networks are treated the way a physicist treats a many-body
-    system: look for the few macroscopic variables and dimensionless ratios that
-    survive the limit.</p>
+    <p class="lede">Notes on <a href="https://boris-hanin.github.io/informal-course-2026/"><em>Theory of Deep Learning</em></a>,
+    Boris Hanin's reading course at Princeton (Fall 2026):
+    scaling limits, infinite-width training dynamics, feature learning, and diffusion
+    models, read through the lens of statistical physics. Large networks are treated
+    the way a physicist treats a many-body system: look for the few macroscopic
+    variables and dimensionless ratios that survive the limit.</p>
     <p class="meta">3 lectures &middot; 5 interactive figures &middot;
-      <a href="notes/LLM-note.pdf">PDF</a> &middot; <a href="https://github.com/LianghongMo/LLM-note">LaTeX source</a></p>
+      <a href="notes/LLM-note.pdf">PDF</a> &middot; <a href="https://github.com/LianghongMo/LLM-note">LaTeX source</a> &middot;
+      <a href="https://boris-hanin.github.io/informal-course-2026/">Course page</a></p>
+    <p class="course-credit">Lectures by Boris Hanin. Unofficial notes by
+      Lianghong Mo; any errors are the note-taker's.</p>
   </section>
 
   <section class="lectures" aria-label="Lectures">
     <article class="lecture-card">
       <div class="card-main">
-        <p class="kicker">Lecture 1</p>
+        <p class="kicker">Lecture 1 &middot; Sep 10, 2026</p>
         <h3><a href="lecture1.html">Three Questions in Deep-Learning Theory</a></h3>
         <p>Neural networks as parametrized families of functions, and the three questions the notes are built around: what simple theory emerges at large scale, what features training discovers, and how a diffusion model learns and samples an entire distribution.</p>
         <p class="card-formula">\[\text{Architecture}+\text{Data}+\text{Optimization}\;\Longrightarrow\;f_{\theta}\]</p>
@@ -53,7 +57,7 @@ window.MathJax = {
     </article>
     <article class="lecture-card">
       <div class="card-main">
-        <p class="kicker">Lecture 2</p>
+        <p class="kicker">Lecture 2 &middot; Sep 17, 2026</p>
         <h3><a href="lecture2.html">Scaling Limits of Neural Networks</a></h3>
         <p>Three worked scaling limits, each controlled by a single dimensionless ratio: depth over width in deep linear networks, the residual scale in deep ResNets, and parameters over data in ridge regression.</p>
         <p class="card-formula">\[\xi=L/N,\qquad s_L\sim L^{-1/2},\qquad \gamma=d/n\]</p>
@@ -63,7 +67,7 @@ window.MathJax = {
     </article>
     <article class="lecture-card">
       <div class="card-main">
-        <p class="kicker">Lecture 3</p>
+        <p class="kicker">Lecture 3 &middot; Sep 24, 2026</p>
         <h3><a href="lecture3.html">Infinite-Width Training Dynamics</a></h3>
         <p>How the initialization and learning rate must scale with width for training to have an infinite-width limit. The NTK parametrization freezes the features and reduces training to kernel regression; the mean-field parametrization lets every neuron move, and gradient descent becomes a Wasserstein gradient flow of the neuron distribution.</p>
         <p class="card-formula">\[\partial_t\mu_t=\eta\,\nabla_\vartheta\cdot\Big(\mu_t\,\nabla_\vartheta\frac{\delta\mathcal L}{\delta\mu_t}\Big)\]</p>
@@ -91,8 +95,9 @@ window.MathJax = {
   </section>
 
   <footer class="page-foot">
-    Generated from the LaTeX sources in <a href="https://github.com/LianghongMo/LLM-note/tree/main/notes">notes/</a>
-    with <code>python tools/build_site.py</code>.
+    <p>Lectures by Boris Hanin in his reading course <a href="https://boris-hanin.github.io/informal-course-2026/"><em>Theory of Deep Learning</em></a> (Princeton, Fall 2026). Unofficial notes by Lianghong Mo; any errors are the note-taker's.</p>
+    <p>Generated from the LaTeX sources in <a href="https://github.com/LianghongMo/LLM-note/tree/main/notes">notes/</a>
+    with <code>python tools/build_site.py</code>.</p>
   </footer>
 </main>
 </body>

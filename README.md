@@ -1,17 +1,21 @@
 # LLM-note
 
-Lecture notes on the theory of neural networks: scaling limits, infinite-width
-training dynamics, feature learning, and diffusion models, written from a
-statistical-physics point of view.
+Notes on **Theory of Deep Learning**, Boris Hanin's reading course at Princeton
+(Fall 2026): scaling limits, infinite-width training dynamics, feature
+learning, and diffusion models, written from a statistical-physics point of view.
+
+**Credit.** The course, its lectures and its choice of topics are Boris Hanin's;
+see the course page at <https://boris-hanin.github.io/informal-course-2026/>.
+These are unofficial notes by Lianghong Mo, and any errors are the note-taker's.
 
 - **Website:** <https://lianghongmo.github.io/LLM-note/> (rendered math and interactive figures)
 - **PDF:** [notes/LLM-note.pdf](notes/LLM-note.pdf)
 
-| Lecture | Contents |
-|---|---|
-| [1. Three Questions in Deep-Learning Theory](https://lianghongmo.github.io/LLM-note/lecture1.html) | Neural networks as function families. Scaling laws and large-network limits (NTK, mean field, DMFT, Gaussian processes). Feature learning, superposition, feature geometry, in-context learning. Diffusion models: forward process, score, denoising score matching, probability-flow ODE. |
-| [2. Scaling Limits of Neural Networks](https://lianghongmo.github.io/LLM-note/lecture2.html) | Deep linear networks and the effective depth ξ = L/N. Neural SDE vs. Neural ODE limits of deep ResNets, and the fractional-Brownian interpolation s_L ∼ L^(−H). High-dimensional ridge regression: Marchenko–Pastur law, exact risk, λ* = γ/SNR. |
-| [3. Infinite-Width Training Dynamics](https://lianghongmo.github.io/LLM-note/lecture3.html) | How initialization and learning rate must scale with width. NTK parametrization (γ = 1): frozen kernel, training as kernel regression. Mean-field parametrization (γ = √N): neurons move O(1), the neuron distribution follows a Wasserstein gradient flow. |
+| Lecture | Date | Contents |
+|---|---|---|
+| [1. Three Questions in Deep-Learning Theory](https://lianghongmo.github.io/LLM-note/lecture1.html) | Sep 10 | Neural networks as function families. Scaling laws and large-network limits (NTK, mean field, DMFT, Gaussian processes). Feature learning, superposition, feature geometry, in-context learning. Diffusion models: forward process, score, denoising score matching, probability-flow ODE. |
+| [2. Scaling Limits of Neural Networks](https://lianghongmo.github.io/LLM-note/lecture2.html) | Sep 17 | Deep linear networks and the effective depth ξ = L/N. Neural SDE vs. Neural ODE limits of deep ResNets, and the fractional-Brownian interpolation s_L ∼ L^(−H). High-dimensional ridge regression: Marchenko–Pastur law, exact risk, λ* = γ/SNR. |
+| [3. Infinite-Width Training Dynamics](https://lianghongmo.github.io/LLM-note/lecture3.html) | Sep 24 | How initialization and learning rate must scale with width. NTK parametrization (γ = 1): frozen kernel, training as kernel regression. Mean-field parametrization (γ = √N): neurons move O(1), the neuron distribution follows a Wasserstein gradient flow. |
 
 Interactive figures on the website:
 
