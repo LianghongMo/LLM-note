@@ -1,12 +1,11 @@
 # LLM-note
 
-Notes on **Theory of Deep Learning**, Boris Hanin's reading course at Princeton
-(Fall 2026): scaling limits, infinite-width training dynamics, feature
+Notes for Boris Hanin's reading course **Theory of Deep Learning** (Princeton,
+Fall 2026): scaling limits, infinite-width training dynamics, feature
 learning, and diffusion models, written from a statistical-physics point of view.
 
-**Credit.** The course, its lectures and its choice of topics are Boris Hanin's;
-see the course page at <https://boris-hanin.github.io/informal-course-2026/>.
-These are unofficial notes by Lianghong Mo, and any errors are the note-taker's.
+**Credit.** The course and its lectures are Boris Hanin's; see the course page
+at <https://boris-hanin.github.io/informal-course-2026/>. Notes by Lianghong Mo.
 
 - **Website:** <https://lianghongmo.github.io/LLM-note/> (rendered math and interactive figures)
 - **PDF:** [notes/LLM-note.pdf](notes/LLM-note.pdf)

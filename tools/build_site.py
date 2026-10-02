@@ -31,10 +31,9 @@ COURSE = {
 }
 NOTE_TAKER = "Lianghong Mo"
 CREDIT = (
-    f'Lectures by {COURSE["instructor"]} in his reading course '
+    f'Notes by {NOTE_TAKER} for {COURSE["instructor"]}\'s reading course '
     f'<a href="{COURSE["url"]}"><em>{COURSE["title"]}</em></a> '
-    f'({COURSE["where"]}, {COURSE["term"]}). Unofficial notes by {NOTE_TAKER}; '
-    "any errors are the note-taker's."
+    f'({COURSE["where"]}, {COURSE["term"]}).'
 )
 
 LECTURES = [
@@ -407,8 +406,8 @@ def lecture_page(lec, lectures, pdf_href) -> str:
     <header class="lecture-head">
       <p class="kicker">Lecture {n} &middot; {lec["date"]}</p>
       <h1>{lec["title"]}</h1>
-      <p class="course-credit"><a href="{COURSE["url"]}">{COURSE["title"]}</a>
-        &middot; {COURSE["instructor"]} &middot; {COURSE["where"]}, {COURSE["term"]}</p>
+      <p class="course-credit">Notes for {COURSE["instructor"]}'s reading course
+        <a href="{COURSE["url"]}"><em>{COURSE["title"]}</em></a> &middot; {COURSE["where"]}, {COURSE["term"]}</p>
       <p class="lede">{lec["abstract"]}</p>
       <p class="head-formula">\\({lec["formula"]}\\)</p>
     </header>
@@ -458,14 +457,14 @@ def index_page(lectures, pdf_href, full=True) -> str:
     </article>""")
 
     return (
-        head("LLM-note", f"Unofficial notes on {COURSE['instructor']}'s {COURSE['title']} reading course ({COURSE['where']}, {COURSE['term']}): scaling limits, infinite-width training dynamics, feature learning, and diffusion models.", full)
+        head("LLM-note", f"Notes for {COURSE['instructor']}'s reading course {COURSE['title']} ({COURSE['where']}, {COURSE['term']}): scaling limits, infinite-width training dynamics, feature learning, and diffusion models.", full)
         + topbar("home", pdf_href, lectures)
         + f"""
 <main class="home">
   <section class="hero">
     <h1>LLM-note</h1>
-    <p class="lede">Notes on <a href="{COURSE["url"]}"><em>{COURSE["title"]}</em></a>,
-    {COURSE["instructor"]}'s reading course at {COURSE["where"]} ({COURSE["term"]}):
+    <p class="lede">Notes for {COURSE["instructor"]}'s reading course
+    <a href="{COURSE["url"]}"><em>{COURSE["title"]}</em></a> ({COURSE["where"]}, {COURSE["term"]}):
     scaling limits, infinite-width training dynamics, feature learning, and diffusion
     models, read through the lens of statistical physics. Large networks are treated
     the way a physicist treats a many-body system: look for the few macroscopic
@@ -473,8 +472,6 @@ def index_page(lectures, pdf_href, full=True) -> str:
     <p class="meta">{len(lectures)} lectures &middot; {n_figures} interactive figures &middot;
       <a href="{pdf_href}">PDF</a> &middot; <a href="{REPO_URL}">LaTeX source</a> &middot;
       <a href="{COURSE["url"]}">Course page</a></p>
-    <p class="course-credit">Lectures by {COURSE["instructor"]}. Unofficial notes by
-      {NOTE_TAKER}; any errors are the note-taker's.</p>
   </section>
 
   <section class="lectures" aria-label="Lectures">{"".join(cards)}
