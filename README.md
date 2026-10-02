@@ -27,7 +27,7 @@ Interactive figures on the website:
 
 ```
 notes/                  LaTeX source, the single source of truth
-  main.tex              compiles both lectures into LLM-note.pdf
+  main.tex              compiles all lectures into LLM-note.pdf
   lecture1.tex
   lecture2.tex
   lecture3.tex
